@@ -1,5 +1,5 @@
 /**
-    Numem Endianess helpers. 
+    Endianess Helpers
 
     Copyright: Copyright © 2023-2025, Kitsunebi Games
     Copyright: Copyright © 2023-2025, Inochi2D Project
@@ -130,3 +130,41 @@ T nu_etoh(T, Endianess endian)(T in_) @system @nogc nothrow {
         return in_;
 }
 
+/**
+    Converts bytes between system and the given endianness.
+
+    This essentially flips the byte-order within the type if
+    the given endianness does not match the system endiannes.
+
+    Params:
+        in_ = The value to potentially flip.
+        endian = The endianness to convert between.
+
+    Returns:
+        If $(D endian) does not match $(D NATIVE_ENDIAN),
+        returns the input with the byte order reversed,
+        otherwise returns the original value.
+*/
+T nu_etoh(T)(T in_, Endianess endian) @system @nogc nothrow {
+    if (endian != NATIVE_ENDIAN)
+        return nu_flip_bytes!T(in_);
+    else
+        return in_;
+}
+
+/**
+    Converts between network order endianness and the system endiannes.
+
+    Params:
+        in_ = The value to potentially flip.
+
+    Returns:
+        If $(D NATIVE_ENDIAN) does not match $(D NETWORK_ORDER),
+        returns the input with the byte order reversed,
+        otherwise returns the original value.
+*/
+pragma(inline, true)
+T nu_ntoh(T)(T in_) @trusted @nogc nothrow
+if (__traits(isScalar, T)) {
+    return nu_etoh!(T, NETWORK_ORDER)(in_);
+}

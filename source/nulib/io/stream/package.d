@@ -181,18 +181,6 @@ class Stream {
     abstract ptrdiff_t read(ref ubyte[] buffer);
 
     /**
-        Reads bytes from the specified stream in to the specified buffer
-
-        Returns:
-            The amount of bytes read from the stream, 
-            or a $(D StreamError).
-        
-        See_Also:
-            $(D StreamError)
-    */
-    abstract ptrdiff_t read(ref vector!ubyte buffer, size_t offset, size_t count);
-
-    /**
         Writes bytes from the specified buffer in to the stream
 
         Notes
@@ -207,18 +195,6 @@ class Stream {
             $(D StreamError)
     */
     abstract ptrdiff_t write(ubyte[] buffer);
-
-    /**
-        Writes bytes from the specified buffer in to the stream
-
-        Returns:
-            The amount of bytes read from the stream, 
-            or a $(D StreamError).
-        
-        See_Also:
-            $(D StreamError)
-    */
-    abstract ptrdiff_t write(ref vector!ubyte buffer, int offset, int count);
 }
 
 /**

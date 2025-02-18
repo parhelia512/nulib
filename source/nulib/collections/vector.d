@@ -317,7 +317,7 @@ public:
 
 @("vector-of-strings")
 unittest {
-    import nulib.nstring;
+    import nulib.string : nstring;
     vector!nstring strs;
     strs ~= nstring("Hello, world!");
     strs ~= nstring("Hello, world!");

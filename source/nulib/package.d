@@ -14,5 +14,5 @@
 module nulib;
 
 public import nulib.object;
-public import nulib.nstring;
+public import nulib.string;
 public import nulib.collections;

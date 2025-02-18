@@ -6,7 +6,7 @@
     License:   $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Authors:   Luna Nielsen
 */
-module nulib.nstring;
+module nulib.string;
 import numem.core.hooks;
 import numem.core.traits;
 import numem.core.memory;
@@ -61,6 +61,20 @@ enum isStringable(T) =
 */
 enum StringCharSize(T) =
     StringCharType!T.sizeof;
+
+/**
+    Gets the type of the element in a string-ish type.
+*/
+template StringCharType(T) {
+    static if (isSomeString!T) {
+        static if(isSomeNString!T)
+            alias StringCharType = Unqual!(T.CharType);
+        else
+            alias StringCharType = Unqual!(typeof(T.init[0].init));
+    } else {
+        alias StringCharType = void;
+    }
+}
 
 
 //
@@ -151,6 +165,11 @@ public:
     alias value this;
 
     /**
+        The type of character the string contains.
+    */
+    alias CharType = T;
+
+    /**
         The length of the string.
     */
     @property size_t length() @safe nothrow => memory.length;
@@ -192,11 +211,11 @@ public:
     /**
         Creates an nstring
     */
-    this()(immutable(T)[] rhs) @system {
+    this(inout(T)[] rhs) @system {
         if (__ctfe) {
-            this.memory = rhs;
+            this.memory = cast(immutable(T)[])rhs;
         } else {
-            this.memory = rhs.nu_idup;
+            this.memory = cast(immutable(T)[])rhs.nu_idup;
         }
     }
 
@@ -216,6 +235,14 @@ public:
     */
     void clear() {
         this.resizeImpl(0);
+    }
+
+    /**
+        Reverses the contents of the string
+    */
+    void reverse() {
+        import nulib.memory.endian : nu_flip_bytes;
+        nu_flip_bytes(memory);
     }
 
     /**

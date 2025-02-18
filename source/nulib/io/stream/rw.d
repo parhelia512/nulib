@@ -24,7 +24,7 @@ private:
 
 public:
     this(Stream stream) {
-        enforce(stream.canRead(), nogc_new!StreamUnsupportedException);
+        enforce(stream.canRead(), nogc_new!StreamUnsupportedException(stream));
         this.stream = stream;
     }
 }
@@ -42,7 +42,7 @@ private:
 
 public:
     this(Stream stream) {
-        enforce(stream.canWrite(), nogc_new!StreamUnsupportedException);
+        enforce(stream.canWrite(), nogc_new!StreamUnsupportedException(stream));
         this.stream = stream;
     }
 }

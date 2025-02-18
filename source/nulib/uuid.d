@@ -48,7 +48,7 @@ private:
 
 public:
     /**
-        Creates a UUID from specified byte slice
+        Constructs a UUID from the specified byte slice
     */
     this(ubyte[16] bytes) {
         this.data = bytes;
@@ -57,6 +57,23 @@ public:
         this.time_hi_and_version = nu_ntoh(this.time_hi_and_version);
     }
 
+    /**
+        Constructs a UUID from the specified string.
+    */
+    this(string text) {
+        this = UUID.parse(text);
+    }
+
+    /**
+        Validates the correctness of a UUID string.
+
+        Params:
+            slice = The string slice to validate
+        
+        Returns:
+            $(D true) if the slice is a valid UUID string,
+            $(D false) otherwise.
+    */
     static bool validate(string slice) {
         import std.ascii;
 
@@ -118,7 +135,8 @@ public:
     /**
         Tries to parse a UUID from a string.
 
-        Returns a nil UUID on failure.
+        Returns:
+            A nil UUID on failure.
     */
     static UUID parse(string slice) {
         if (!UUID.validate(slice))

@@ -17,3 +17,6 @@ nulib-test-*
 
 dub.selections.json
 out/
+
+# Windows metadata
+*.winmd

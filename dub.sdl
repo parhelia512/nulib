@@ -6,15 +6,21 @@ license "BSL-1.0"
 
 dependency "numem" version=">=1.0.0-rc2"
 
+// Basic configuration
 targetPath "out/"
+
+// Sub-packages
+subPackage "modules/win32/"
 
 // Needed for ddox.
 dflags "-oq" platform="ldc"
-
 x:ddoxFilterArgs "--min-protection=Public" \
     "--ex" "nulib.collections.internal" \
     "--ex" "nulib.memory.internal"
 
+
+// Build configurations, static should be preferred.
+// Do NOT change the order of these.
 configuration "static" {
     targetType "staticLibrary"
 }

@@ -1,0 +1,36 @@
+name "win32"
+description "Win32 submodule"
+authors "Luna Nielsen"
+copyright "Copyright © 2025, Luna Nielsen"
+license "BSL-1.0"
+
+// These should be whichever version you fetched
+// of nulib.
+dependency "nulib" version="*"
+dependency "numem" version="*"
+
+// The config which should always be used under normal circumstances.
+configuration "library" {
+    targetType "sourceLibrary"
+}
+
+// Regenerate configuration.
+configuration "regen" {
+    targetType "none"
+    preGenerateCommands \
+        "dub build --config=wind" \
+        "$DUB_TARGET_PATH/wind.exe -m $DUB_TARGET_PATH/Windows.Win32.winmd -o $DUB_TARGET_PATH/source/ -c $DUB_TARGET_PATH/gen/core.d --coremod nulib.win32.core -i $DUB_TARGET_PATH/gen/ignore.cfg -r $DUB_TARGET_PATH/gen/replace.cfg"
+}
+
+// WinD Binding Generator.
+configuration "wind" {
+    targetType "executable"
+    targetName "wind"
+
+    // Needed when building the generator.
+    dependency "nulib" path="../../"
+
+    excludedSourceFiles "source/*.*"
+    stringImportPaths "wind/"
+    sourcePaths "wind/"
+}

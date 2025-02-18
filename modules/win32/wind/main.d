@@ -65,7 +65,6 @@ bool filterNamespace(string namespace, string[] ignored) {
         if (ins[0] == '#')
             continue;
         
-
         // End wildcard.
         if (ins[$-1] == '*' && namespace.startsWith(ins[0..$-1]))
             return false;
@@ -162,13 +161,22 @@ string getname(string name)
     return c > 0 ? name[c + 1 .. $] : name;
 }
 
+string getGUIDComponents(CustomAttributeSig sig) {
+    string[] cmp;
+    foreach(fixed; sig.fixed) {
+        auto element = fixed.value.get!ElementSig;
+        cmp ~= element.value.coerce!string;
+    }
+
+    if (cmp.length == 1)
+        return "\"%s\"".format(cmp[0]);
+
+    return cmp.join(", ");
+}
 
 void dumpGUIDAttr(std.stdio.File f, CustomAttributeSig sig)
 {
-    auto fixed = sig.fixed[0];
-    auto element = fixed.value.get!ElementSig;
-    auto str = element.value.coerce!string;
-    f.writefln("@GUID(\"%s\")", str);
+    f.writefln("@GUID(%s)", sig.getGUIDComponents());
 }
 
 void dumpSectionHeader(std.stdio.File f, string name)

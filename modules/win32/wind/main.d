@@ -19,6 +19,9 @@ import std.math;
 import std.regex;
 import std.utf;
 
+import std.parallelism : parallel;
+import std.datetime.stopwatch : StopWatch, AutoStart;
+
 
 
 enum maxLineWidth = 120;
@@ -131,16 +134,25 @@ string getVersionStmt(int arch) {
     switch(arch) {
 
         case 1:
-            return "version(Windows)";
+            return "version(X86)";
 
         case 2:
             return "version(X86_64)";
+
+        case 3:
+            return "version(Windows)";
         
         case 4:
             return "version(AArch64)";
+        
+        case 5:
+            return ""; // Why would something only exist on arm64 and win32??
 
         case 6:
             return "version(Win64)";
+
+        case 7:
+            return "version(Windows)";
 
         default:
             return "";
@@ -1338,13 +1350,14 @@ string getParamText(const ref ParamSig sig, const ref Param param)
 alias StringSet = RedBlackTree!string;
 alias TypeSet = bool[TypeDef];
 
-StringSet[string] dependencies;
-TypeSet[TypeDef] nestedMap;
+__gshared string[][string] imports;
+__gshared StringSet[string] dependencies;
+__gshared TypeSet[TypeDef] nestedMap;
 
-string[string] safeWords;
+__gshared string[string] safeWords;
 
-bool[string] skipInterfaces;
-bool[string] skipMethods;
+__gshared bool[string] skipInterfaces;
+__gshared bool[string] skipMethods;
 
 void buildDependencies(Metadata* meta, TypeDef type, string namespace, StringSet rb)
 {
@@ -1420,8 +1433,6 @@ void buildDependencies(Metadata* meta, TypeDef type, string namespace, StringSet
             }
         }
     }
-
-
 }
 
 
@@ -1661,8 +1672,12 @@ void initTargetDir(string outDirectory, string file, string modname) {
 int main(string[] args)
 {
     string[string] configNamespace;
-    
-    
+
+
+    auto stopwatchGraph = StopWatch(AutoStart.no);
+    auto stopwatchCodeGen = StopWatch(AutoStart.no);
+    float graphgen;
+    float codegen;
 
     
     TypeSet[TypeDef] attributeMap;
@@ -1673,6 +1688,7 @@ int main(string[] args)
     string cfgReplaceFileName;
     string cfgCoreFileName;
     string cfgCoreModName;
+    uint cfgThreadCount;
     string docsDirectory;
 
 
@@ -1691,6 +1707,7 @@ int main(string[] args)
                              "ignore|i",   "namespaces to ignore",                 &cfgIgnoreFileName,
                              "replace|r",  "namespaces to replace",                &cfgReplaceFileName,
                              "docs|d",     "generate documentation",               &docsDirectory,
+                             "threads|t",  "thread count",                         &cfgThreadCount,
             config.required, "core|c",     "core.d file to be copied",             &cfgCoreFileName,
             config.required, "coremod",    "Core module name",                     &cfgCoreModName,
         );
@@ -1857,39 +1874,46 @@ int main(string[] args)
     auto metadata = Metadata(mdFileName);
     auto namespaces = getNamespaces(metadata, cfgIgnoredNamespaces).array;
 
-
-
-    writeln("Building dependency graph...");
-
-    foreach(nestedRecord; metadata.nestedClassTable.items)
+    stopwatchGraph.start();
     {
-        auto child = nestedRecord.nested;
-        auto parent = nestedRecord.enclosing;
-        if (auto aa = parent in nestedMap)
-            (*aa)[child] = true;
-        else
+        foreach(nestedRecord; metadata.nestedClassTable.items)
         {
-            auto aa = [child : true];            
-            nestedMap[parent] = aa;
+            auto child = nestedRecord.nested;
+            auto parent = nestedRecord.enclosing;
+            if (auto aa = parent in nestedMap)
+                (*aa)[child] = true;
+            else
+            {
+                auto aa = [child : true];            
+                nestedMap[parent] = aa;
+            }
+        }
+        nestedMap.rehash();
+
+        foreach(namespace; namespaces)
+        {
+            auto rb = new RedBlackTree!string();
+            dependencies[namespace] = rb;
+
+            foreach(type; getTypeDefs(metadata, namespace))
+            {            
+                buildDependencies(&metadata, type, namespace, rb);
+            }
+
+            imports[namespace.idup] = 
+                dependencies[namespace]
+                .array
+                .filter!(a => getns(a).filterNamespace(cfgIgnoredNamespaces))
+                .array
+                .sort
+                .array;
         }
     }
-    nestedMap.rehash();
-
-    foreach(namespace; namespaces)
-    {
-        auto rb = new RedBlackTree!string();
-        dependencies[namespace] = rb;
-
-        foreach(type; getTypeDefs(metadata, namespace))
-        {            
-            buildDependencies(&metadata, type, namespace, rb);
-        }
-    }
+    stopwatchGraph.stop();
 
     
-
-
-    
+    graphgen = (cast(float)stopwatchGraph.peek.total!"msecs"())*0.0001f;
+    writefln("Graph built in %ss...", graphgen);
     
     if (exists(outDirectory) && isDir(outDirectory))
     {
@@ -1899,82 +1923,82 @@ int main(string[] args)
         }
         catch(FileException)
         {
-            writefln("Warning, cannot delete %s", buildNormalizedPath(absolutePath(outDirectory)));
+            writefln("Warning: Cannot delete %s", buildNormalizedPath(absolutePath(outDirectory)));
         }
     }
-
     initTargetDir(outDirectory, cfgCoreFileName, cfgCoreModName);
-    foreach(namespace; namespaces) {
-        string path = makePath(outDirectory, namespace, configNamespace, namespaces) ~ ".d";
-        string modName = makeModuleName(namespace, configNamespace);        
-        mkdirRecurse(dirName(path));        
 
-        auto f = std.stdio.File(path, "w");
-        f.writeDocComment(import("header.txt").replace("%NAMESPACE%", namespace));
-        f.writefln("module %s;", modName);
-        f.writeln;
-        writefln("Processing %s", namespace);
-        f.writefln("public import %s;", cfgCoreModName);
+    stopwatchCodeGen.start();
+    {
+        auto parallelRange = cfgThreadCount > 0 ? parallel(namespaces, cfgThreadCount) : parallel(namespaces);
+        foreach(namespace; parallelRange) {
+            auto ns = namespace.idup;
+            string path = makePath(outDirectory, ns, configNamespace, namespaces) ~ ".d";
+            string modName = makeModuleName(ns, configNamespace);        
+            mkdirRecurse(dirName(path));
 
-        auto imports = dependencies[namespace].array.filter!(a => getns(a).filterNamespace(cfgIgnoredNamespaces)).array.sort;
+            auto f = std.stdio.File(path, "w");
+            f.writeDocComment(import("header.txt").replace("%NAMESPACE%", ns));
+            f.writefln("module %s;", modName);
+            f.writeln;
+            f.writefln("public import %s;", cfgCoreModName);
 
-        string lastNamespace;
-        bool atLeastOne;
-        ptrdiff_t w, v;
-        foreach(i; imports)
-        {
-            atLeastOne = true;
-            auto n = getns(i);
-            if (n != lastNamespace)
+            string lastNamespace;
+            bool atLeastOne;
+            ptrdiff_t w, v;
+            foreach(i; imports[ns])
             {
-                if (lastNamespace.length)
-                    f.writeln(";");
-                auto moduleName = makeModuleName(n, configNamespace);
-                auto importName = getname(i);
-                f.writef("public import %s : %s", moduleName, importName);
-                lastNamespace = n;
-                w = 17 + moduleName.length + importName.length;
-                v = w - importName.length;
-            }
-            else
-            {
-                auto importName = getname(i);
-                if (importName.length + w > maxLineWidth - 3)
+                atLeastOne = true;
+                auto n = getns(i);
+                if (n != lastNamespace)
                 {
-                    f.writeln(",");                    
-                    f.write("".padLeft(' ', v));
-                    w = v;
+                    if (lastNamespace.length)
+                        f.writeln(";");
+                    auto moduleName = makeModuleName(n, configNamespace);
+                    auto importName = getname(i);
+                    f.writef("public import %s : %s", moduleName, importName);
+                    lastNamespace = n;
+                    w = 17 + moduleName.length + importName.length;
+                    v = w - importName.length;
                 }
                 else
-                    f.write(", ");
-                f.write(importName);
-                w += importName.length + 2;
-                w += importName.length + 2;
+                {
+                    auto importName = getname(i);
+                    if (importName.length + w > maxLineWidth - 3)
+                    {
+                        f.writeln(",");                    
+                        f.write("".padLeft(' ', v));
+                        w = v;
+                    }
+                    else
+                        f.write(", ");
+                    f.write(importName);
+                    w += importName.length + 2;
+                    w += importName.length + 2;
+                }
             }
+            if (atLeastOne)
+                f.writeln(";");
+
+            f.writeln;
+            f.writeln("extern(Windows) @nogc nothrow:");
+            f.writeln;
+                    
+            dumpEnums(f, metadata, namespace, docsDirectory.length > 0);    
+            dumpApisConstants(f, metadata, namespace);
+            dumpDelegates(f, metadata, namespace,docsDirectory.length > 0);
+            dumpStructs(f, metadata, namespace,docsDirectory.length > 0);
+            dumpApis(f, metadata, namespace,docsDirectory.length > 0);
+            dumpInterfaces(f, metadata, namespace,docsDirectory.length > 0);
+
+            // Print that we're done emitting the module.
+            writefln("%s -> %s", ns, modName, path);
         }
-        if (atLeastOne)
-            f.writeln(";");
-
-        f.writeln;
-        f.writeln("extern(Windows) @nogc nothrow:");
-        f.writeln;
-                
-        dumpEnums(f, metadata, namespace, docsDirectory.length > 0);    
-        dumpApisConstants(f, metadata, namespace);
-        dumpDelegates(f, metadata, namespace,docsDirectory.length > 0);
-        dumpStructs(f, metadata, namespace,docsDirectory.length > 0);
-        dumpApis(f, metadata, namespace,docsDirectory.length > 0);
-        dumpInterfaces(f, metadata, namespace,docsDirectory.length > 0);
     }
-
-
-
+    stopwatchCodeGen.stop();
     writeln;
-
-    writeln("Press any key to continue.");
     
-
-    getchar();
-
+    codegen = (cast(float)stopwatchCodeGen.peek.total!"msecs"())*0.0001f;
+    writefln("Done! (graph=%ss, codegen=%s, total=%s)", graphgen, codegen, graphgen+codegen);
     return 0;
 }

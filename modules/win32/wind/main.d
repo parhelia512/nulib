@@ -17,6 +17,7 @@ import std.path: buildPath;
 import std.getopt;
 import std.math;
 import std.regex;
+import std.utf;
 
 
 
@@ -25,16 +26,38 @@ enum maxReturnTypeAlignment = 8;
 enum maxFieldAlignment = 20;
 enum minSetTreshold = 0.4;
 
-string makePath(string outDir, string namespace, string[string] config)
+bool hasSubNamespace(string namespace, string[] allNamespaces) {
+    foreach(ref allowedNS; allNamespaces) {
+        
+        // Skip checking against self.
+        if (allowedNS == namespace)
+            continue;
+        
+        // Skip shorter ones.
+        if (allowedNS.length < namespace.length)
+            continue;
+
+        // startsWith has odd behaviour, so just check the slice.
+        if (allowedNS[0..namespace.length] == namespace)
+            return true;
+    }
+    return false;
+}
+
+string makePath(string outDir, string namespace, string[string] config = null, string[] nslist = null)
 {
     string[] result;
-    foreach(name; namespace.splitter('.'))
-    {
+    foreach(name; namespace.splitter('.')) {
         auto part = config.get(name.toLower, name.toLower).split(".");
         if (part.length) {
             result ~= part;
         }
     }
+
+    // package subdir.
+    if (hasSubNamespace(namespace, nslist))
+        result ~= "package";
+
     return buildPath([outDir] ~ result);
 }
 
@@ -75,6 +98,11 @@ bool filterNamespace(string namespace, string[] ignored) {
     }
 
     return true;
+}
+
+string escape(string input) {
+    auto re = regex("(\\\"|\\\\)");
+    return input.replaceAll(re, "\\$1");
 }
 
 auto getNamespaces(const ref Metadata db, string[] ignored)
@@ -444,7 +472,7 @@ void dumpEnum(std.stdio.File f, const ref TypeDef e, bool docs = false)
 void dumpConstant(std.stdio.File f, Constant.ConstantValue v)
 {
     if (auto s = v.peek!wstring)
-        f.writef("\"%s\"", *s);
+        f.writef("\"%s\"", escape(toUTF8(*s)));
     else if (auto n = v.peek!(typeof(null)))
         f.write("null");
     else if (auto i = v.peek!int)
@@ -1570,8 +1598,8 @@ void writeDocComment(std.stdio.File f, string header) {
     f.writeln("*/");
 }
 
-void initTargetDir(string outDirectory, string file, string modname, string[string] configNamespace) {
-    string path = makePath(outDirectory, modname, configNamespace) ~ ".d";
+void initTargetDir(string outDirectory, string file, string modname) {
+    string path = makePath(outDirectory, modname) ~ ".d";
     if (!exists(path)) {
         mkdirRecurse(dirName(path));
         copy(file, buildPath(dirName(path), "core.d"));
@@ -1775,7 +1803,7 @@ int main(string[] args)
     
 
     auto metadata = Metadata(mdFileName);
-    auto namespaces = getNamespaces(metadata, cfgIgnoredNamespaces);
+    auto namespaces = getNamespaces(metadata, cfgIgnoredNamespaces).array;
 
 
 
@@ -1823,10 +1851,9 @@ int main(string[] args)
         }
     }
 
-    initTargetDir(outDirectory, cfgCoreFileName, cfgCoreModName, configNamespace);
-    foreach(namespace; namespaces)
-    {
-        string path = makePath(outDirectory, namespace, configNamespace) ~ ".d";
+    initTargetDir(outDirectory, cfgCoreFileName, cfgCoreModName);
+    foreach(namespace; namespaces) {
+        string path = makePath(outDirectory, namespace, configNamespace, namespaces) ~ ".d";
         string modName = makeModuleName(namespace, configNamespace);        
         mkdirRecurse(dirName(path));        
 
@@ -1837,7 +1864,7 @@ int main(string[] args)
         writefln("Processing %s", namespace);
         f.writefln("public import %s;", cfgCoreModName);
 
-        auto imports = dependencies[namespace].array.filter!(a => !cfgIgnoredNamespaces.canFind(getns(a))).array.sort;
+        auto imports = dependencies[namespace].array.filter!(a => getns(a).filterNamespace(cfgIgnoredNamespaces)).array.sort;
 
         string lastNamespace;
         bool atLeastOne;

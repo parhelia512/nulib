@@ -25,3 +25,24 @@ struct DllImport {
     */
     string name;
 }
+
+/**
+    Gets the GUID attribute of a type.
+
+    See_Also:
+        $(LINK2 https://github.com/rumbu13/windows-d/blob/master/cfg/core.d#L56, windows-d source)
+*/
+template GUIDOF(T, A...)
+{
+    static if (A.length == 0)
+        alias GUIDOF = GUIDOF!(T, __traits(getAttributes, T));
+    else static if (A.length == 1)
+    {
+        static assert(is(typeof(A[0]) == GUID), T.stringof ~ "doesn't have a @GUID attribute attached to it");
+        enum GUIDOF = A;
+    }
+    else static if (is(typeof(A[0]) == GUID))
+        enum GUIDOF = A[0];
+    else
+        alias GUIDOF = GUIDOF!(T, A[1 .. $]);
+}

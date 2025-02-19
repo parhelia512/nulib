@@ -46,3 +46,14 @@ template GUIDOF(T, A...)
     else
         alias GUIDOF = GUIDOF!(T, A[1 .. $]);
 }
+
+// TODO: Move "RAII" stuff into numem instead.
+// Then alias it here.
+
+/**
+    Attribute which indicates that the resource should be freed with
+    the given handler in a RAII context.
+*/
+struct RAIIFree(alias H) {
+    private alias Handler = H;
+}

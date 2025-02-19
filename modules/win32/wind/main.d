@@ -100,9 +100,51 @@ bool filterNamespace(string namespace, string[] ignored) {
     return true;
 }
 
-string escape(string input) {
-    auto re = regex("(\\\"|\\\\)");
-    return input.replaceAll(re, "\\$1");
+string escape(wstring input) {
+    string output;
+    foreach(wchar c; input) {
+        switch(c) {
+            case '\0':
+                output ~= "\\0";
+                break;
+
+            case '\\':
+                output ~= "\\\\";
+                break;
+
+            case '"':
+                output ~= "\\\"";
+                break;
+            
+            default:
+                if (isGraphical(c))
+                    output ~= c;
+                else
+                    output ~= "\\u%04x".format(cast(ushort)c);
+                break;
+        }
+    }
+    return output;
+}
+
+string getVersionStmt(int arch) {
+    switch(arch) {
+
+        case 1:
+            return "version(Windows)";
+
+        case 2:
+            return "version(X86_64)";
+        
+        case 4:
+            return "version(AArch64)";
+
+        case 6:
+            return "version(Win64)";
+
+        default:
+            return "";
+    }
 }
 
 auto getNamespaces(const ref Metadata db, string[] ignored)
@@ -472,7 +514,7 @@ void dumpEnum(std.stdio.File f, const ref TypeDef e, bool docs = false)
 void dumpConstant(std.stdio.File f, Constant.ConstantValue v)
 {
     if (auto s = v.peek!wstring)
-        f.writef("\"%s\"", escape(toUTF8(*s)));
+        f.writef("\"%s\"", escape(*s));
     else if (auto n = v.peek!(typeof(null)))
         f.write("null");
     else if (auto i = v.peek!int)
@@ -759,15 +801,21 @@ void dumpStruct(std.stdio.File f, const ref TypeDef struc, int level = 0, string
     if (!level)
         f.writeln;
 
-    MDMatcher* doc = level == 0 && docs ? findDoc(struc.name) : null;
-    if (doc)
-        dumpDocumentation(f, doc.description, 0); 
-
     foreach(ca; struc.attributes)
     {
         if (ca.name == "NativeTypedefAttribute")
         {
             //do nothing
+        }
+        else if (ca.name == "SupportedArchitectureAttribute")
+        {
+            auto fixed = ca.value.fixed[0];
+            auto element = fixed.value.get!ElementSig;
+            auto arch = element.value.get!int;
+            if (arch == 0 || arch == 7)
+                return;
+            
+            f.writeln(getVersionStmt(arch));
         }
         else if (ca.name == "RAIIFreeAttribute")
         {
@@ -784,6 +832,10 @@ void dumpStruct(std.stdio.File f, const ref TypeDef struc, int level = 0, string
             
         }
     }
+
+    MDMatcher* doc = level == 0 && docs ? findDoc(struc.name) : null;
+    if (doc)
+        dumpDocumentation(f, doc.description, 0); 
 
     string[string] types;
 

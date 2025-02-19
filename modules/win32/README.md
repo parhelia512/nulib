@@ -20,6 +20,7 @@ Just add nulib:win32 as a dependency; while the code is generated with wind, the
  * Added extra fallbacks for new types added to the windows def.
  * Added more detailed header for every file.
  * Added string escaping handling to prevent variables escaping strings when writing Windows path seperators.
+ * Added version tags for `SupportedArchitectureAttribute`
 
 ## TODO:
 Generally `wind` is very messy and when I have more time I wish to completely redo it.

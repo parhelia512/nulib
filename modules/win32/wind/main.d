@@ -1911,9 +1911,8 @@ int main(string[] args)
     }
     stopwatchGraph.stop();
 
-    
-    graphgen = (cast(float)stopwatchGraph.peek.total!"msecs"())*0.0001f;
-    writefln("Graph built in %ss...", graphgen);
+    graphgen = (cast(float)stopwatchGraph.peek.total!"msecs"())*0.001f;
+    writefln("Graph built in %s...", stopwatchGraph.peek);
     
     if (exists(outDirectory) && isDir(outDirectory))
     {
@@ -1998,7 +1997,7 @@ int main(string[] args)
     stopwatchCodeGen.stop();
     writeln;
     
-    codegen = (cast(float)stopwatchCodeGen.peek.total!"msecs"())*0.0001f;
-    writefln("Done! (graph=%ss, codegen=%s, total=%s)", graphgen, codegen, graphgen+codegen);
+    codegen = (cast(float)stopwatchCodeGen.peek.total!"msecs"())*0.001f;
+    writefln("Done! (graph=%s, codegen=%s, total=%ss)", stopwatchCodeGen.peek, stopwatchCodeGen.peek, graphgen+codegen);
     return 0;
 }

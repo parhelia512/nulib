@@ -20,3 +20,6 @@ out/
 
 # Windows metadata
 *.winmd
+
+# VSCode Junk
+.vscode/

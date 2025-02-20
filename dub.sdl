@@ -11,6 +11,7 @@ targetPath "out/"
 
 // Sub-packages
 subPackage "modules/win32/"
+subPackage "modules/com/"
 
 // Needed for ddox.
 dflags "-oq" platform="ldc"

@@ -77,7 +77,7 @@ class Stream {
             $(D true) if you can read data from the stream,
             $(D false) otherwise.
     */
-    abstract bool canRead();
+    abstract @property bool canRead();
 
     /**
         Whether the stream can be written to.
@@ -86,7 +86,7 @@ class Stream {
             $(D true) if you can write data to the stream,
             $(D false) otherwise.
     */
-    abstract bool canWrite();
+    abstract @property bool canWrite();
     
     /**
         Whether the stream can be seeked.
@@ -95,7 +95,7 @@ class Stream {
             $(D true) if you can seek through the stream,
             $(D false) otherwise.
     */
-    abstract bool canSeek();
+    abstract @property bool canSeek();
 
     /**
         Whether the stream can timeout during operations.
@@ -104,7 +104,16 @@ class Stream {
             $(D true) if the stream may time out during operations,
             $(D false) otherwise.
     */
-    abstract bool canTimeout();
+    abstract @property bool canTimeout();
+
+    /**
+        Whether the stream can be flushed to disk.
+
+        Returns:
+            $(D true) if the stream may be flushed,
+            $(D false) otherwise.
+    */
+    abstract @property bool canFlush();
 
     /**
         Length of the stream.
@@ -112,7 +121,7 @@ class Stream {
         Returns:
             Length of the stream, or $(D -1) if the length is unknown.
     */
-    abstract ptrdiff_t length();
+    abstract @property ptrdiff_t length();
 
     /**
         Position in stream
@@ -120,7 +129,7 @@ class Stream {
         Returns
             Position in the stream, or $(D -1) if the position is unknown.
     */
-    abstract ptrdiff_t tell();
+    abstract @property ptrdiff_t tell();
 
     /**
         Timeout in milliseconds before a read operation will fail.
@@ -128,7 +137,7 @@ class Stream {
         Returns
             A timeout in milliseconds, or $(D 0) if there's no timeout.
     */
-    abstract int readTimeout();
+    abstract @property int readTimeout();
 
     /**
         Timeout in milliseconds before a write operation will fail.
@@ -136,7 +145,7 @@ class Stream {
         Returns
             A timeout in milliseconds, or $(D 0) if there's no timeout.
     */
-    abstract int writeTimeout();
+    abstract @property int writeTimeout();
 
     /**
         Clears all buffers of the stream and causes data to be written to the underlying device.

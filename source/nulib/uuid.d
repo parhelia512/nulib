@@ -47,6 +47,7 @@ private:
     }
 
 public:
+
     /**
         Constructs a UUID from the specified byte slice
     */
@@ -60,7 +61,7 @@ public:
     /**
         Provides compatibility with .NET's Guid struct.
     */
-    this(uint time_low, ushort time_mid, ushort time_hi_and_version, ubyte d0, ubyte d1, ubyte d2, ubyte d3, ubyte d4, ubyte d5) {
+    this(uint time_low, ushort time_mid, ushort time_hi_and_version, ubyte clk0, ubyte clk1, ubyte d0, ubyte d1, ubyte d2, ubyte d3, ubyte d4, ubyte d5) {
         this.time_low = time_low;
         this.time_mid = time_mid;
         this.time_hi_and_version = time_hi_and_version;

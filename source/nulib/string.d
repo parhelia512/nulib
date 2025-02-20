@@ -10,7 +10,10 @@ module nulib.string;
 import numem.core.hooks;
 import numem.core.traits;
 import numem.core.memory;
-import numem;
+import numem;    
+import nulib.text.unicode : 
+    encode, 
+    decode;
 
 //
 //              STRING TRAITS
@@ -139,26 +142,38 @@ private:
     alias SelfType = typeof(this);
     
     // Backing slice of the string.
-    immutable(T)[] memory;
+    immutable(T)[] memory = null;
 
     // Resizing algorithm
     pragma(inline, true)
     void resizeImpl(size_t newLength) @trusted {
-        memory = memory.nu_resize(newLength);
-        if (newLength > 0)
-            memory = memory.nu_terminate();
+        if (newLength == 0) {
+            if (memory.ptr !is null)
+                memory.nu_resize(0);
+            
+            nogc_zeroinit(memory);
+            return;
+        }
+
+        // NOTE: nu_terminatd re-allocates the slice twice,
+        // As such we put a smaller implementation here.
+        memory.nu_resize(newLength+1);
+        (cast(T*)memory.ptr)[newLength] = '\0';
+        memory = memory[0..$-1];
     }
 
     // Range set algorithm
     pragma(inline, true)
     void setRangeImpl(inout(T)[] dst, inout(T)[] src) {
-        nu_memmove(cast(void*)dst.ptr, cast(void*)src.ptr, src.length*T.sizeof);
+        if (memory)
+            nu_memmove(cast(void*)dst.ptr, cast(void*)src.ptr, src.length*T.sizeof);
     }
 
     // Char set algorithm
     pragma(inline, true)
     void setCharImpl(void* at, T c) {
-        *(cast(T*)at) = c;
+        if (memory)
+            *(cast(T*)at) = c;
     }
 
 public:
@@ -204,8 +219,7 @@ public:
     alias toCString = ptr;
 
     ~this() {
-        if (memory.ptr)
-            this.resizeImpl(0);
+        this.resizeImpl(0);
     }
 
     /**
@@ -214,8 +228,33 @@ public:
     this(inout(T)[] rhs) @system {
         if (__ctfe) {
             this.memory = cast(immutable(T)[])rhs;
-        } else {
+        } else if (rhs) {
             this.memory = cast(immutable(T)[])rhs.nu_idup;
+        } else {
+            nogc_zeroinit(this.memory);
+        }
+    }
+
+    /**
+        Creates a string from a null-terminated C string.
+    */
+    this(const(T)* rhs) @system {
+        if (rhs) {
+            this.memory = fromStringz(rhs).nu_idup;
+        } else {
+            nogc_zeroinit(this.memory);
+        }
+    }
+    
+    /**
+        Creates a string from a string from any other UTF encoding.
+    */
+    this(U)(inout(U)[] rhs) @system if (isSomeChar!U) {
+        if (rhs) {
+            auto dec = decode(rhs, true);
+            this = encode!(SelfType)(dec, true);
+        } else {
+            nogc_zeroinit(this.memory);
         }
     }
 
@@ -225,8 +264,10 @@ public:
     this(ref return scope inout(SelfType) rhs) @trusted {
         if (__ctfe) {
             this.memory = rhs.memory;
-        } else {
+        } else if (rhs) {
             this.memory = rhs.memory.nu_idup;
+        } else {
+            nogc_zeroinit(this.memory);
         }
     }
 
@@ -281,7 +322,7 @@ public:
         Appends a c string to this string.
     */
     void opOpAssign(string op = "~")(inout(T)* other) @system {
-        this.opOpAssign!"~"(other[0..nu_strlen(other)]);
+        this.opOpAssign!"~"(fromStringz!T(other));
     }
 }
 
@@ -294,13 +335,13 @@ unittest {
     s  ~= 'c';
     ws ~= '\u4567';
     ds ~= '\U0000ABCD';
-    assert(s.toDString() == "c" 
-       && ws.toDString() == "\u4567"w 
-       && ds.toDString() == "\U0000ABCD"d);
+    assert(s == "c" 
+       && ws == "\u4567"w 
+       && ds == "\U0000ABCD"d);
 
     // Not working yet: append to itself
-    //s ~= s;
-    //assert(s.toDString() == "cc");
+    s ~= s;
+    assert(s == "cc");
 }
 
 @("nstring: append")
@@ -313,7 +354,7 @@ unittest {
     s ~= cast(string)null;
     s ~= "";
     s ~= cstr1;
-    assert(s.toDString() == "a zero-terminated string");
+    assert(s == "a zero-terminated string");
 
     nwstring ws;
     ws ~= cstr2;
@@ -321,7 +362,7 @@ unittest {
 
     ndstring wd;
     wd ~= cstr3;
-    assert(wd.toDString() == "ho"d);
+    assert(wd == "ho"d);
 }
 
 @("nstring: string in map")
@@ -370,7 +411,7 @@ unittest {
 */
 inout(T)[] fromStringz(T)(inout(T)* str) @system @nogc pure nothrow
 if (isSomeChar!T) {
-    return str ? str[0 .. cstrlen!T(str)] : null;
+    return str ? str[0 .. nu_strlen!T(str)] : null;
 }
 
 /**

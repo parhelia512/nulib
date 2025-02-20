@@ -69,6 +69,11 @@ private:
     // Reservation algorithm
     pragma(inline, true)
     void reserveImpl(size_t length) @trusted {
+        if (length == 0) {
+            memory = memory.nu_resize(0);
+            this.memoryCapacity = 0;
+            return;
+        }
 
         // Resize down if neccesary.
         size_t sliceSize = memory.length;
@@ -115,6 +120,11 @@ public:
     alias value this;
 
     /**
+        Gets the internal memory slice.
+    */
+    @property T[] value() @trusted nothrow pure => memory;
+
+    /**
         The length of the vector
     */
     @property size_t length() const @safe nothrow => memory.length;
@@ -154,11 +164,6 @@ public:
     */
     @property T* back() @system nothrow => empty ? null : &memory[$-1];
 
-    /**
-        Gets the internal memory slice.
-    */
-    @property T[] value() @trusted nothrow pure => memory;
-
     ~this() {
 
         // This essentially frees the memory.
@@ -175,17 +180,17 @@ public:
             If said pointers were allocated with the GC, they may be
             collected!
     */
-    this(T[] elements) @system {
+    this(T[] rhs) @system {
         if (__ctfe) {
-            memory = elements;
-            memoryCapacity = elements.length;
+            memory = rhs;
+            memoryCapacity = rhs.length;
         } else {
             static if (hasElaborateMove!T) {
-                this.resizeImpl(elements.length);
-                nogc_move(memory, elements);
+                this.resizeImpl(rhs.length);
+                nogc_move(memory, rhs);
             } else {
-                this.resizeImpl(elements.length);
-                nogc_copy(memory, elements);
+                this.resizeImpl(rhs.length);
+                nogc_copy(memory, rhs);
             }
         }
     }

@@ -11,6 +11,7 @@
 module nulib.text.unicode;
 import nulib.memory.endian;
 import nulib.collections.vector;
+import nulib.string;
 
 public import nulib.text.unicode.utf8;
 public import nulib.text.unicode.utf16;
@@ -21,7 +22,7 @@ import utf8 = nulib.text.unicode.utf8;
 import utf16 = nulib.text.unicode.utf16;
 import utf32 = nulib.text.unicode.utf32;
 
-@nogc nothrow:
+@nogc:
 
 /**
     A unicode codepoint

@@ -10,8 +10,9 @@ dependency "numem" version=">=1.0.0-rc2"
 targetPath "out/"
 
 // Sub-packages
-subPackage "modules/win32/"
-subPackage "modules/com/"
+subPackage "modules/win32"
+subPackage "modules/com"
+subPackage "modules/objc"
 
 // Needed for ddox.
 dflags "-oq" platform="ldc"

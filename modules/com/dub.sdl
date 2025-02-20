@@ -1,24 +1,23 @@
 name "com"
-description "nulib COM Programming"
-authors "Luna"
-copyright "Copyright © 2025, Luna"
-license "BSL-1.0"
+description "COM API"
+targetType "library"
+
+// OLE32 needed for COM.
+libs "ole32"
 
 dependency "nulib" version="*"
 dependency "numem" version="*"
 
-targetPath "out/"
-
-configuration "static" {
-    targetType "staticLibrary"
-}
-
-configuration "dynamic" {
-    targetType "dynamicLibrary"
+configuration "library" {
+    platforms "windows"
+    targetType "sourceLibrary"
 }
 
 configuration "unittest" {
     targetType "autodetect"
-
     dependency "silly" version="~>1.1.1"
+}
+
+configuration "other_platforms" {
+    targetType "none"
 }

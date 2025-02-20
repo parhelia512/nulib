@@ -29,7 +29,7 @@ import numem;
             // Use the value.
         }
         ---
-
+    
     Threadsafety:
         The internal reference count kept by shared_ptr is $(B not) atomic.
         As such you should take care with accessing the value and refcount

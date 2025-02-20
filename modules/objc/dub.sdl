@@ -1,14 +1,14 @@
-name "win32"
-description "Win32 API"
+name "objc"
+description "Objective-C API"
 targetType "library"
 
+dependency "objective-d" version="*"
 dependency "nulib" version="*"
 dependency "numem" version="*"
 
-// The config which should always be used under normal circumstances.
 configuration "library" {
-    platforms "windows"
-    targetType "sourceLibrary"
+    platforms "osx" "ios" "tvos" "watchos" "visionos"
+    targetType "library"
 }
 
 configuration "unittest" {

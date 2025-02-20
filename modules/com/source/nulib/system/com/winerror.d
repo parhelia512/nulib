@@ -10,8 +10,10 @@
     Source:    $(DRUNTIMESRC core/sys/windows/_winerror.d)
     Authors:   Luna Nielsen
 */
-module nulib.com.winerror;
-import nulib.com.objbase;
+module nulib.system.com.winerror;
+import nulib.system.com.objbase;
+
+alias HRESULT = int;
 
 alias SCODE = int;
 

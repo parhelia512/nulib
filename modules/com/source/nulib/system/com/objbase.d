@@ -6,13 +6,11 @@
     License:   $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Authors:   Luna Nielsen
 */
-module nulib.com.objbase;
-import nulib.com.winerror;
-import nulib.com.unk;
+module nulib.system.com.objbase;
+import nulib.system.com.winerror;
+import nulib.system.com.unk;
 
 extern(Windows) @nogc nothrow:
-
-alias HRESULT = int;
 
 enum CLSCTX : uint {
     CLSCTX_INPROC_SERVER    = 0x1,
@@ -26,10 +24,11 @@ enum CLSCTX : uint {
 }
 
 HRESULT CoInitialize(void*);
-HRESULT CoInitializeEx(void*);
+HRESULT CoInitializeEx(uint, void*);
 void CoUninitialize();
 uint CoGetCurrentProcess();
-HRESULT CoCreateInstance(const(Guid)*, IUnknown, CLSCTX, const(Guid)*, void*);
+HRESULT CoCreateInstance(const(Guid)*, IUnknown, CLSCTX, const(Guid)*, void**);
 void CoFreeLibrary(void*);
 void CoFreeAllLibraries();
 void CoFreeUnusedLibraries();
+HRESULT CLSIDFromProgID(const(wchar)*, const(Guid)*);

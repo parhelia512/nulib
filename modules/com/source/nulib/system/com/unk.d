@@ -6,9 +6,9 @@
     License:   $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Authors:   Luna Nielsen
 */
-module nulib.com.unk;
-import nulib.com.winerror;
-import nulib.com.objbase;
+module nulib.system.com.unk;
+import nulib.system.com.winerror;
+import nulib.system.com.objbase;
 import numem.core.traits : getUDAs, hasUDA;
 import nulib.uuid;
 
@@ -23,7 +23,7 @@ alias Guid = UUID;
     You can check if a type has a Guid with a $(D is(__uuidof!T)) expression.
 */
 template __uuidof(T, A...) {
-    import nulib.com.unk : Guid;
+    import nulib.system.com.unk : Guid;
 
     static if (A.length == 0)
         alias __uuidof = __uuidof!(T, __traits(getAttributes, T));

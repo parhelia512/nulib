@@ -8,7 +8,7 @@ nu*.lib
 libnu*.so
 libnu*.dylib
 libnu*.a
-libnu*-test-*
+nu*-test-*
 *.exe
 *.pdb
 *.o

@@ -1,0 +1,19 @@
+name "glib"
+description "GLib API"
+targetType "library"
+
+dependency "nulib" version="*"
+dependency "numem" version="*"
+
+libs "glib-2.0" "gobject-2.0"
+
+copyFiles "COPYING-glib"
+
+configuration "library" {
+    targetType "library"
+}
+
+configuration "unittest" {
+    targetType "autodetect"
+    dependency "silly" version="~>1.1.1"
+}

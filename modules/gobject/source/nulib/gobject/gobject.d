@@ -34,6 +34,30 @@ template GObjectVTableOffset(T) if (is(T : GTypeClass)) {
 }
 
 /**
+    Wraps $(D g_object_ref) to be compatible with the hybrid GObject-
+    D types.
+*/
+extern(C)
+GObject d_object_ref(GObject obj) @nogc nothrow {
+    return g_object_realign(
+        g_object_ref(
+            g_object_realign(obj)
+        )
+    );
+}
+
+/**
+    Wraps $(D g_object_unref) to be compatible with the hybrid GObject-
+    D types.
+*/
+extern(C)
+void d_object_unref(GObject obj) @nogc nothrow {
+    g_object_unref(
+        g_object_realign(obj)
+    );
+}
+
+/**
     Base class of all GObject classes.
 */
 abstract
@@ -60,25 +84,25 @@ public:
         Creates a new instance of the given type.
     */
     static T create(T = typeof(this), Args...)(const(char)* propertyName, Args args) if (is(T : GObject)) {
-        return g_object_realign!T(g_object_new_valist(g_object_get_d_type(T.classinfo), propertyName, args));
+        return g_object_fixup!T(g_object_new_valist(g_object_get_d_type(T.classinfo), propertyName, args));
     }
 
     /**
         Creates a new instance of the given type.
     */
     static T create(T = typeof(this), Args...)() if (is(T : GObject)) {
-        return g_object_realign!T(g_object_new_with_properties(g_object_get_d_type(T.classinfo), 0, null, null));
+        return g_object_fixup!T(g_object_new_with_properties(g_object_get_d_type(T.classinfo), 0, null, null));
     }
 
     /**
         Adds one to the GObject refcount.
     */
-    final GObject retain() => g_object_ref(this);
+    final GObject retain() => d_object_ref(this);
 
     /**
         Subtracts one to the GObject refcount.
     */
-    final GObject retlease() => g_object_unref(this);
+    final void release() => d_object_unref(this);
 
     /**
         Gets a name field from the object's table of associations.
@@ -129,6 +153,14 @@ protected:
     final
     @property auto g_class() { return g_type_instance.g_class; }
 
+    /**
+        The original base GObject alignment of this object.
+    */
+    final
+    @property void* g_base_align() {
+        return (cast(void*)this)-_G_GOBJECT_PRIVATE_OFFSET;
+    }
+
 public:
 
     /**
@@ -143,6 +175,6 @@ extern(C) @nogc nothrow:
 extern GObject g_object_new_valist(GType, const(char)*, ...);
 extern GObject g_object_new_with_properties(GType, uint, const(char)**, const(void)*);
 extern GObject g_object_ref(GObject);
-extern GObject g_object_unref(GObject);
+extern void g_object_unref(GObject);
 extern void* g_object_get_data(GObject, const(char)*);
 extern void g_object_set_data(GObject, const(char)*, void*);

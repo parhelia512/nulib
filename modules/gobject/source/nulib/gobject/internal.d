@@ -62,20 +62,27 @@ GType g_object_get_d_type(TypeInfo_Class ti) {
     Type pre-fixup, turning it from "just" a GObject
     to a GObject wrapped in a NuObject.
 */
-T g_object_realign(T)(GObject object, TypeInfo_Class ti = T.classinfo) {
+T g_object_fixup(T)(GObject object, TypeInfo_Class ti = T.classinfo) {
     if (object.__vptr[0] == ti.vtbl[0])
         return cast(T)object;
 
     // Unhide our private data section.
     // this is where our hybrid GObject-D class *really*
     // begins.
-    void* objptr = cast(void*)object;
-    objptr += _G_GOBJECT_PRIVATE_OFFSET;
-    object = cast(GObject)objptr;
+    object = g_object_realign(object);
 
     // Add vtable.
-    (cast(void**)objptr)[0] = _G_D_VTABLE_REGISTRY[cast(void*)ti].ptr;
+    *(cast(void***)object) = _G_D_VTABLE_REGISTRY[cast(void*)ti].ptr;
     return cast(T)object;
+}
+
+GObject g_object_realign(GObject object) {
+    GTypeInstance* ti = cast(GTypeInstance*)object;
+    if (ti && ti.g_class) {
+        if (g_type_fundamental(ti.g_class.g_type) == G_TYPE_OBJECT)
+            return cast(GObject)(cast(void*)object + _G_GOBJECT_PRIVATE_OFFSET);
+    }
+    return cast(GObject)(cast(void*)object - _G_GOBJECT_PRIVATE_OFFSET);
 }
 
 /**

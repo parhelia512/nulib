@@ -52,13 +52,14 @@ private:
     void* qdata;
 
 public:
-    abstract void setProperty(uint propertyId, const(void)*, void* pspec);
-    abstract void getProperty(uint propertyId, void*, void* pspec);
-    abstract void dispose();
-    abstract void finalize();
-    abstract void dispatchPropertiesChanged(uint npspecs, ref void* pspecs);
-    abstract void notify(void* pspec);
-    abstract void constructed();
+extern(D):
+    void setProperty(uint propertyId, const(void)*, void* pspec);
+    void getProperty(uint propertyId, void*, void* pspec);
+    void dispose();
+    void finalize();
+    void dispatchPropertiesChanged(uint npspecs, ref void* pspecs);
+    void notify(void* pspec);
+    void constructed();
 }
 
 private

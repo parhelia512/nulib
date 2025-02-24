@@ -1,12 +1,11 @@
 name "gobject"
 description "GObject API"
 targetType "library"
+targetPath "out/"
 
 dependency "nulib" version="*"
 dependency "nulib:glib" version="*"
 dependency "numem" version="*"
-
-dflags "-preview=bitfields"
 
 libs "gobject-2.0" "gio-2.0"
 

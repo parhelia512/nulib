@@ -1,6 +1,7 @@
 name "com"
 description "COM API"
 targetType "library"
+targetPath "out/"
 
 // OLE32 needed for COM.
 libs "ole32"

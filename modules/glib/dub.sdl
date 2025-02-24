@@ -1,6 +1,7 @@
 name "glib"
 description "GLib API"
 targetType "library"
+targetPath "out/"
 
 dependency "nulib" version="*"
 dependency "numem" version="*"

@@ -1,6 +1,7 @@
 name "objc"
 description "Objective-C API"
 targetType "library"
+targetPath "out/"
 
 dependency "objective-d" version="*"
 dependency "nulib" version="*"

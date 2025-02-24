@@ -14,15 +14,25 @@ import nulib.gtype;
 import nulib.glib;
 import numem;
 
-
 /**
+    Initializes GObject.
 */
-pragma(crt_constructor)
 export
 extern(C) void nu_gobject_init() {
     _g_dinterop_init();
     foreach(module_; ModuleInfo) {
         nu_gobject_register(module_);
+    }
+}
+
+/**
+    Template which adds a CRT constructor to your application,
+    making the GObject binding system load before main().
+*/
+mixin template GObjectEntrypoint() {
+    pragma(crt_constructor)
+    extern(C) void _d_gobject_ctor() {
+        nu_gobject_init();
     }
 }
 

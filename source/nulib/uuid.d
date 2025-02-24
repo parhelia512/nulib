@@ -326,7 +326,7 @@ unittest {
 unittest {
     UUID uuid1 = UUID.parse("ce1a553c-762d-11ef-b864-0242ac120002");
     nstring str = uuid1.toString();
-    assert(str[] == "ce1a553c-762d-11ef-b864-0242ac120002", str[]);
+    assert(str == "ce1a553c-762d-11ef-b864-0242ac120002", str);
 }
 
 @("uuid: generation")

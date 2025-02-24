@@ -242,7 +242,6 @@ public:
     this(const(T)* rhs) @system {
         if (rhs) {
             this.memory = fromStringz(rhs).nu_idup;
-            nu_terminate(this.memory);
         } else {
             nogc_zeroinit(this.memory);
         }
@@ -268,7 +267,6 @@ public:
             this.memory = rhs.memory;
         } else if (rhs) {
             this.memory = rhs.memory.nu_idup;
-            nu_terminate(this.memory);
         } else {
             nogc_zeroinit(this.memory);
         }

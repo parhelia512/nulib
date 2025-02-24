@@ -15,13 +15,6 @@ struct g_vtbl_offset { size_t offset; }
 */
 enum g_ptr_size = (void*).sizeof;
 
-/**
-    Creates a new
-*/
-T g_object_new(T, Args...)(Args args) {
-
-}
-
 template GObjectVTableOffset(T) if (is(T : GTypeClass)) {
     template baseType(X) {
         static if (is(X Y == super))
@@ -44,31 +37,76 @@ template GObjectVTableOffset(T) if (is(T : GTypeClass)) {
     Base class of all GObject classes.
 */
 abstract
-@g_vtbl_offset(g_ptr_size*3)
 class GObject : GTypeClass {
+extern(D):
 private:
 @nogc:
     uint ref_count;
     void* qdata;
 
+protected:
+    override size_t g_vtbl_padding() { return g_ptr_size*3; }
+
 public:
-extern(D):
-    void setProperty(uint propertyId, const(void)*, void* pspec);
-    void getProperty(uint propertyId, void*, void* pspec);
-    void dispose();
-    void finalize();
-    void dispatchPropertiesChanged(uint npspecs, ref void* pspecs);
-    void notify(void* pspec);
-    void constructed();
+    void setProperty(uint propertyId, const(void)*, void* pspec) { }
+    void getProperty(uint propertyId, void*, void* pspec) { }
+    void dispose() { }
+    void finalize() { }
+    void dispatchPropertiesChanged(uint npspecs, ref void* pspecs) { }
+    void notify(void* pspec) { }
+    void constructed() { }
+
+    /**
+        Creates a new instance of the given type.
+    */
+    static T create(T = typeof(this), Args...)(const(char)* propertyName, Args args) if (is(T : GObject)) {
+        return g_object_realign!T(g_object_new_valist(g_object_get_d_type(T.classinfo), propertyName, args));
+    }
+
+    /**
+        Creates a new instance of the given type.
+    */
+    static T create(T = typeof(this), Args...)() if (is(T : GObject)) {
+        return g_object_realign!T(g_object_new_with_properties(g_object_get_d_type(T.classinfo), 0, null, null));
+    }
+
+    /**
+        Adds one to the GObject refcount.
+    */
+    final GObject retain() => g_object_ref(this);
+
+    /**
+        Subtracts one to the GObject refcount.
+    */
+    final GObject retlease() => g_object_unref(this);
+
+    /**
+        Gets a name field from the object's table of associations.
+    */
+    final void* get(const(char)* key) => g_object_get_data(this, key);
+
+    /**
+        Gets a name field from the object's table of associations.
+    */
+    final void set(const(char)* key, void* data) => g_object_set_data(this, key, data);
 }
+
+size_t _g_d_vtbl_offset0 = __traits(getVirtualIndex, GTypeClass.g_vtbl_padding);
+size_t _g_d_vtbl_offset1 = __traits(getVirtualIndex, GTypeClass.g_type_initializer);
 
 private
 class GTypeClass : NuObject {
+extern(D):
 @nogc:
 private:
     GTypeInstance g_type_instance;
 
 protected:
+
+    /**
+        Gets the offset of vtable's beginning.
+    */
+    size_t g_vtbl_padding() { return g_ptr_size; }
 
     /**
         Gets the name of the initializer for this type.
@@ -102,7 +140,9 @@ public:
 
 extern(C) @nogc nothrow:
 
-export
-extern(C) void g_object_constructed(GObject object) {
-    _g_object_fixup(object);
-}
+extern GObject g_object_new_valist(GType, const(char)*, ...);
+extern GObject g_object_new_with_properties(GType, uint, const(char)**, const(void)*);
+extern GObject g_object_ref(GObject);
+extern GObject g_object_unref(GObject);
+extern void* g_object_get_data(GObject, const(char)*);
+extern void g_object_set_data(GObject, const(char)*, void*);

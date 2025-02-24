@@ -10,6 +10,7 @@
 module nulib.gobject.hooks;
 import nulib.gobject.internal;
 import nulib.gobject.gobject;
+import nulib.collections.set;
 import nulib.gtype;
 import nulib.glib;
 import numem;
@@ -20,29 +21,51 @@ import numem;
 export
 extern(C) void nu_gobject_init() {
     _g_dinterop_init();
-    foreach(module_; ModuleInfo) {
-        nu_gobject_register(module_);
-    }
+    nu_gobject_scan();
 }
 
 /**
-    Template which adds a CRT constructor to your application,
-    making the GObject binding system load before main().
+    Recursively explores modules for GObject classes
+    to bind.
 */
-mixin template GObjectEntrypoint() {
-    pragma(crt_constructor)
-    extern(C) void _d_gobject_ctor() {
-        nu_gobject_init();
+export
+extern(C)
+void nu_gobject_scan() {
+    weak_set!string seen;
+    
+    foreach(module_; ModuleInfo) {
+        nu_gobject_register_module(module_, seen);
     }
+
+    seen.clearContents();
 }
 
 private:
+
+void nu_gobject_register_module(ModuleInfo* module_, ref weak_set!string seen) {
+    if (seen.contains(module_.name))
+        return;
+
+    seen.insert(module_.name);
+
+    nu_gobject_register(module_);
+
+    foreach(submodule; module_.importedModules) {
+        nu_gobject_register_module(cast(ModuleInfo*)submodule, seen);
+    }
+}
 
 void nu_gobject_register(ModuleInfo* module_) {
     
     // Skip loading class-less modules.
     if (module_.localClasses.length == 0)
         return;
+
+    // Skip any elements in our skip table.
+    foreach(toskip; _G_D_MODULES_SKIP) {
+        if (module_.name[0..toskip.length] == toskip)
+            return;
+    }
 
     debug d_log(G_LOG_LEVEL_DEBUG, "Scanning %s...", module_.name.ptr);
 
@@ -63,6 +86,13 @@ void nu_gobject_register(ModuleInfo* module_) {
             continue;
         
         g_object_register_d_type(klass);
-        // TODO: Fixup vtables for the new types.
     }
 }
+
+__gshared const const(char)[][] _G_D_MODULES_SKIP = [
+    "std.",
+    "core.",
+    "rt.",
+    "numem.",
+    "object"
+];

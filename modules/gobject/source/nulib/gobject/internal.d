@@ -4,6 +4,7 @@ import nulib.gmodule;
 import nulib.gobject.gobject;
 import nulib.gtype;
 import nulib.collections.map : weak_map;
+import numem.core.memory : nu_dup;
 import nulib.string;
 import numem;
 import core.stdc.time;
@@ -31,11 +32,50 @@ void g_object_register_d_type(TypeInfo_Class ti) {
 
     nstring g_class_name = _g_extract_class_name(ti);
     GType type = _g_object_try_get_type(ti);
-    g_assert(type != G_TYPE_INVALID, "Could not find type %s! Is the library for it linked in?", g_class_name.ptr);
-    g_errorif(!_G_TYPE_MAP.contains(type), "Attempted to re-register %s", g_type_name(type));
+    const(char)* _g_type_name = g_type_name(type);
 
-    _G_TYPE_MAP[type] = ti;
-    d_log(G_LOG_LEVEL_INFO, "Registered %p as %s...", cast(void*)ti, g_type_name(type));
+    g_assert(type != G_TYPE_INVALID, "Could not find type %s! Is the library for it linked in?", g_class_name.ptr);
+    g_errorif(_G_TYPE_MAP.contains(type), "Attempted to re-register %s", _g_type_name);
+
+    if (type != G_TYPE_INVALID) {
+        _G_TYPE_MAP[type] = ti;
+        _g_object_fixup(type, ti);
+        d_log(G_LOG_LEVEL_INFO, "Registered %p as %s...", cast(void*)ti, _g_type_name);
+    }
+}
+
+/**
+    Gets the type associated with the given class typeinfo,
+    if the class is not registered within the system, the system
+    will attempt to register it for you.
+*/
+GType g_object_get_d_type(TypeInfo_Class ti) {
+    GType type = _g_object_try_get_type(ti);
+    if (type == G_TYPE_INVALID) {
+        g_object_register_d_type(ti);
+    }
+
+    return _g_object_try_get_type(ti);
+}
+
+/**
+    Type pre-fixup, turning it from "just" a GObject
+    to a GObject wrapped in a NuObject.
+*/
+T g_object_realign(T)(GObject object, TypeInfo_Class ti = T.classinfo) {
+    if (object.__vptr[0] == ti.vtbl[0])
+        return cast(T)object;
+
+    // Unhide our private data section.
+    // this is where our hybrid GObject-D class *really*
+    // begins.
+    void* objptr = cast(void*)object;
+    objptr += _G_GOBJECT_PRIVATE_OFFSET;
+    object = cast(GObject)objptr;
+
+    // Add vtable.
+    (cast(void**)objptr)[0] = _G_D_VTABLE_REGISTRY[cast(void*)ti].ptr;
+    return cast(T)object;
 }
 
 /**
@@ -62,7 +102,7 @@ void g_assert(T, Args...)(T expr, const(char)* format, Args args) {
 */
 pragma(inline, true)
 void g_errorif(T, Args...)(T expr, const(char)* format, Args args) {
-    if (!expr)
+    if (expr)
         d_log(G_LOG_LEVEL_ERROR, format, args);
 }
 
@@ -85,45 +125,119 @@ bool _g_version_compatible(uint major, uint minor, uint patch = 0) {
 }
 
 /**
-    Type pre-fixup, turning it from "just" a GObject
-    to a GObject wrapped in a NuObject.
+    Fixup a GObject-derived class using a D TypeInfo.
 */
-void _g_object_pre_fixup(ref GObject object, TypeInfo_Class ti) {
-    g_assert(ti, "Attempted null pre-fixup for %p", object);
+void _g_object_fixup(GType g_type, TypeInfo_Class ti) {
+    d_log(G_LOG_LEVEL_DEBUG, "Running fixups for %s...", g_type_name(g_type));
 
-    // Unhide our private data section.
-    // this is where our hybrid GObject-D class *really*
-    // begins.
-    void* objptr = cast(void*)object;
-    objptr += _G_GOBJECT_PRIVATE_OFFSET;
-    object = cast(GObject)objptr;
+    // TODO: Blit VTable properly via traversal.
+    _G_D_VTABLE_REGISTRY[cast(void*)ti] = ti.vtbl.nu_dup;
+    _g_object_blit_d_vtbls(_G_D_VTABLE_REGISTRY[cast(void*)ti], ti);
+    _g_object_fixup_vtbls(g_type, ti, ti);
+}
 
-    // Replace vtable with the one from our GObject
-    // wrapper.
-    // This wrapper *should* only feature the basic GObject vtable.
-    auto vptr = cast(void***)&object.__vptr;
-    *vptr = ti.vtbl.ptr;
+struct _g_object_fixup_vtblc {
+    size_t d_offset;
+    size_t g_offset;
+}
+
+// Blits D vtables first.
+auto _g_object_blit_d_vtbls(void*[] vtbl, TypeInfo_Class target) {
+    
+    // First entry will always be the type-info.
+    // as such we skip it.
+    foreach(i; 1..target.vtbl.length) {
+        auto symptr = _g_find_first_sym_ptr(target, i);
+        vtbl[i] = symptr;
+    }
+}
+
+// Recursively traverses ti until it finds a vtbl entry for the given
+// index, or returns null if no entries for that was found.
+void* _g_find_first_sym_ptr(ref TypeInfo_Class ti, size_t index) {
+    if (index >= ti.vtbl.length)
+        return null;
+    
+    // Look at base impl.
+    if (ti.vtbl[index] is null)
+        return _g_find_first_sym_ptr(ti.base, index);
+
+    return ti.vtbl[index];
+}
+
+// Overwrites D vtbl entries that are still 0.
+auto _g_object_fixup_vtbls(GType g_type, TypeInfo_Class ti, TypeInfo_Class target) {
+
+    if (ti is _g_get_base_type()) {
+        size_t padding = _g_object_get_ti_vtbl_padding(ti);
+        return _g_object_fixup_vtblc(_G_DVPTR_OFFSET, padding);
+    }
+
+    GTypeQuery query;
+    g_type_query(g_type, query);
+
+    // Get the fixup offset for both GObject and our type info.
+    auto f_offset = _g_object_fixup_vtbls(g_type_parent(g_type), ti.base, target);
+
+    // Short-circuit if we don't have any more vtbl space left.
+    if (f_offset.d_offset >= (query.class_size / g_ptr_size) || f_offset.g_offset >= target.vtbl.length)
+        return f_offset;
+
+    auto g_vtbl = _g_object_get_class(g_type);
+
+    size_t vtcount = target.vtbl.length - f_offset.d_offset;
+    foreach(i; 0..vtcount) {
+        size_t g_offset = (f_offset.g_offset / g_ptr_size) + i;
+        size_t d_offset = f_offset.d_offset+i;
+        auto g_table_entry = &(cast(void**)g_vtbl)[g_offset];
+        auto d_table_entry = &(_G_D_VTABLE_REGISTRY[cast(void*)target][d_offset]);
+        
+        // Implementation was overwritten!
+        if (*d_table_entry) {
+            debug d_log(G_LOG_LEVEL_WARNING, "gvtbl[%llu] = %p", g_offset, *d_table_entry);
+            *g_table_entry = *d_table_entry;
+            continue;
+        }
+
+        // GObject Implementation is the winner.
+        if (*g_table_entry) {
+            *d_table_entry = *g_table_entry;
+            continue;
+        }
+
+        debug d_log(G_LOG_LEVEL_WARNING, "%s[%llu] is undefined! (%llx)", query.type_name, d_offset, *d_table_entry);
+        // Nobody is the winner? undefined.
+    }
+
+    size_t padding = _g_object_get_ti_vtbl_padding(ti);
+    return _g_object_fixup_vtblc(ti.vtbl.length, query.class_size+padding);
 }
 
 /**
-    Fixup a GObject-derived class using a D TypeInfo.
+    Gets the padding of a type, if the vtable entry is unchanged (vtbl offset function
+    wasn't overriden), then 0 will be returned, otherwise the given offset is returned.
 */
-void _g_object_fixup(ref GObject object, TypeInfo_Class ti = null) {
-    if (!ti)
-        ti = typeid(GObject);
+size_t _g_object_get_ti_vtbl_padding(TypeInfo_Class ti) {
+    void* paddingFuncPtr = ti.vtbl[_g_d_vtbl_offset0];
+    if (!paddingFuncPtr)
+        return 0;
 
-    // Class has already been fixed up.
-    if (object.__vptr && (object.__vptr[0] == ti.vtbl[0])) {
-        debug d_log(G_LOG_LEVEL_DEBUG, "Attempted to fixup %p which already has been fixed up!", object);
-        return;
-    }
-
-    // Do the pre-fixup step.
-    _g_object_pre_fixup(object, ti);
+    auto paddingFunc = cast(size_t function(void*) @nogc nothrow)paddingFuncPtr;
+    return paddingFunc(null);
 }
 
 auto _g_object_get_gobject() {
     return _g_object_get_class(G_TYPE_OBJECT);
+}
+
+/**
+    Tries to get a function with the given signature
+*/
+auto _g_object_try_get_vtbl_function(RetT, Args...)(void*[] vtbl, ptrdiff_t offset) {
+    if (offset < 0)
+        offset = vtbl.length-offset;
+
+    return cast(RetT function(void*, Args...) @nogc nothrow)vtbl[offset];
 }
 
 /**
@@ -152,9 +266,13 @@ nstring _g_get_type_initializer_name(TypeInfo_Class ti, const(char)[] typeName) 
     nstring out_;
 
     // Type has an initializer declared.
-    if (ti.vtbl[$-1]) {
-        auto g_init_name_func = cast(immutable(char)[] function(void*) @nogc nothrow)ti.vtbl[$-1];
-        out_ ~= g_init_name_func(null);
+    auto typeInit = _g_object_try_get_vtbl_function!(immutable(char)[])(
+        ti.vtbl, 
+        _g_d_vtbl_offset1
+    );
+
+    if (typeInit) {
+        out_ ~= typeInit(null);
     } else {
         nstring g_d_typename = ti.name;
 
@@ -193,23 +311,16 @@ auto _g_object_get_class(GType type) {
     return g_type_class_ref(type);
 }
 
-void _g_object_vtbl_init() {
-    auto g_vtbl = _g_object_get_gobject();
-    size_t g_vtbl_offset = GObjectVTableOffset!GObject;
-
-    TypeInfo_Class gobject_ti = typeid(GObject);
-    debug d_log(G_LOG_LEVEL_DEBUG, "Replacing d vtable starting at %p...", gobject_ti.vtbl.ptr+_G_DVPTR_OFFSET);
-    foreach(i; _G_DVPTR_OFFSET..gobject_ti.vtbl.length) {
-        gobject_ti.vtbl[i] = (cast(void**)g_vtbl)[g_vtbl_offset+i];
-    }
-    debug d_log(G_LOG_LEVEL_DEBUG, "Done!");
-}
-
 /**
     This constructor hooks in to GType and forces the padding of GObject
     to align with $(D NuObject).
 */
 void _g_dinterop_init() {
+    
+    // Already initialized...
+    if (_G_APPLICATION_SELF)
+        return;
+
     import numem.core.traits : AllocSize;
     d_log(G_LOG_LEVEL_INFO, "Initializing GObject<->D bridge...");
     
@@ -219,11 +330,11 @@ void _g_dinterop_init() {
     g_type_class_adjust_private_offset(g_object_class, &allocSize);
 
     // Setup internal state for the fixup system.
-    _G_DVPTR_OFFSET = _g_get_base_type().vtbl.length*g_ptr_size;
+    _G_DVPTR_OFFSET = _g_get_base_type().vtbl.length;
     _G_GOBJECT_PRIVATE_OFFSET = g_type_class_get_instance_private_offset(g_object_class);
     debug {
         d_log(G_LOG_LEVEL_DEBUG, "GObject private offset=%lli", _G_GOBJECT_PRIVATE_OFFSET);
-        d_log(G_LOG_LEVEL_DEBUG, "D vtable offset=%llu", _G_DVPTR_OFFSET);
+        d_log(G_LOG_LEVEL_DEBUG, "DGObject vtable offset=%llu", _G_DVPTR_OFFSET);
     }
 
     int instanceCount = g_type_get_instance_count(G_TYPE_OBJECT);
@@ -232,8 +343,6 @@ void _g_dinterop_init() {
         d_log(G_LOG_LEVEL_WARNING, "GObjects instantiated prior to nulib-gobject are likely corrupted...");
     }
 
-    // Fixup basic GObject<->D type vtable.
-    _g_object_vtbl_init();
     _G_APPLICATION_SELF = GModule.application;
     d_log(G_LOG_LEVEL_INFO, "Initialization completed!");
 }
@@ -245,15 +354,14 @@ TypeInfo_Class _g_get_base_type() {
     return typeid(GObject).base;
 }
 
-private:
-
 /**
     Variable used by the fixup function to properly align the vtables.
 
     This is essentially the offset into NuObject's vtable where the
     GObject should begin.
 */
-__gshared size_t _G_DVPTR_OFFSET = 0;
+extern(C)
+export __gshared size_t _G_DVPTR_OFFSET = 0;
 
 /**
     The offset into a GObject instance that the private
@@ -262,16 +370,28 @@ __gshared size_t _G_DVPTR_OFFSET = 0;
     Ideally this should align perfectly with the D class
     instance ABI.
 */
-__gshared ptrdiff_t _G_GOBJECT_PRIVATE_OFFSET = 0;
+extern(C)
+export __gshared ptrdiff_t _G_GOBJECT_PRIVATE_OFFSET = 0;
 
 /**
     The internal type map shared across all threads.
 
     This type map lives for the duration of the program.
 */
-__gshared weak_map!(GType, TypeInfo_Class) _G_TYPE_MAP;
+extern(C)
+export __gshared static weak_map!(GType, TypeInfo_Class) _G_TYPE_MAP;
+
+/**
+    Modified copies of each class's vtables.
+
+    This is cursed I know but until I add extern(GObject) this is the
+    best we get.
+*/
+extern(C)
+export __gshared static weak_map!(void*, void*[]) _G_D_VTABLE_REGISTRY;
 
 /**
     A reference to this application.
 */
-__gshared GModule* _G_APPLICATION_SELF;
+extern(C)
+export __gshared static GModule* _G_APPLICATION_SELF;

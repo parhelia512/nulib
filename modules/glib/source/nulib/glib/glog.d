@@ -24,6 +24,61 @@ enum GLogLevel
     G_LOG_LEVEL_DEBUG = 128,
     G_LOG_LEVEL_MASK = -4;
 
+/**
+    Convenience template which calls $(D g_log) for you
+    with the log level set to info.
+*/
+pragma(inline, true)
+void g_info(Args...)(const(char)* log_domain, const(char)* format, Args args) {
+    g_log(log_domain, G_LOG_LEVEL_INFO, format, args);
+}
+
+/**
+    Convenience template which calls $(D g_log) for you
+    with the log level set to message.
+*/
+pragma(inline, true)
+void g_message(Args...)(const(char)* log_domain, const(char)* format, Args args) {
+    g_log(log_domain, G_LOG_LEVEL_MESSAGE, format, args);
+}
+
+/**
+    Convenience template which calls $(D g_log) for you
+    with the log level set to debug.
+*/
+pragma(inline, true)
+void g_debug(Args...)(const(char)* log_domain, const(char)* format, Args args) {
+    g_log(log_domain, G_LOG_LEVEL_DEBUG, format, args);
+}
+
+/**
+    Convenience template which calls $(D g_log) for you
+    with the log level set to warning.
+*/
+pragma(inline, true)
+void g_warning(Args...)(const(char)* log_domain, const(char)* format, Args args) {
+    g_log(log_domain, G_LOG_LEVEL_WARNING, format, args);
+}
+
+/**
+    Convenience template which calls $(D g_log) for you
+    with the log level set to error.
+*/
+pragma(inline, true)
+void g_error(Args...)(const(char)* log_domain, const(char)* format, Args args) {
+    g_log(log_domain, G_LOG_LEVEL_ERROR, format, args);
+}
+
+/**
+    Convenience template which calls $(D g_log) for you
+    with the log level set to error, if the $(D expr) evaluates truthily.
+*/
+pragma(inline, true)
+void g_errorif(Expr, Args...)(Expr expr, const(char)* log_domain, const(char)* format, Args args) {
+    if (expr)
+        g_log(log_domain, G_LOG_LEVEL_ERROR, format, args);
+}
+
 extern (C) nothrow @nogc:
 
 /**

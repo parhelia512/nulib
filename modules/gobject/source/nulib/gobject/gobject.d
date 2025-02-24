@@ -48,13 +48,13 @@ protected:
     override size_t g_vtbl_padding() { return g_ptr_size*3; }
 
 public:
-    void setProperty(uint propertyId, const(void)*, void* pspec) { }
-    void getProperty(uint propertyId, void*, void* pspec) { }
-    void dispose() { }
-    void finalize() { }
-    void dispatchPropertiesChanged(uint npspecs, ref void* pspecs) { }
-    void notify(void* pspec) { }
-    void constructed() { }
+    void setProperty(uint propertyId, const(void)*, void* pspec);
+    void getProperty(uint propertyId, void*, void* pspec);
+    void dispose();
+    void finalize();
+    void dispatchPropertiesChanged(uint npspecs, ref void* pspecs);
+    void notify(void* pspec);
+    void constructed();
 
     /**
         Creates a new instance of the given type.
@@ -89,6 +89,15 @@ public:
         Gets a name field from the object's table of associations.
     */
     final void set(const(char)* key, void* data) => g_object_set_data(this, key, data);
+
+    /**
+        Gets the name of the GObject.
+    */
+    override
+    string toString() {
+        const(char)* typeName = g_type_name(this.type());
+        return cast(string)typeName[0..nu_strlen(typeName)];
+    }
 }
 
 size_t _g_d_vtbl_offset0 = __traits(getVirtualIndex, GTypeClass.g_vtbl_padding);
@@ -127,15 +136,6 @@ public:
     */
     final
     @property GType type() { return g_type_instance.g_class.g_type; }
-
-    /**
-        Gets the name of the GObject.
-    */
-    override
-    string toString() {
-        const(char)* typeName = g_type_name(this.type());
-        return cast(string)typeName[0..nu_strlen(typeName)];
-    }
 }
 
 extern(C) @nogc nothrow:

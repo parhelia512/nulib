@@ -13,6 +13,7 @@ targetPath "out/"
 subPackage "modules/com"
 subPackage "modules/objc"
 subPackage "modules/glib"
+subPackage "modules/gobject"
 
 // Needed for ddox.
 dflags "-oq" platform="ldc"

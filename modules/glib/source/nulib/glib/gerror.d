@@ -7,7 +7,7 @@
     License:   $(LINK2 https://gitlab.gnome.org/GNOME/glib/-/blob/main/LICENSES/LGPL-2.1-or-later.txt, LGPL-2.1-or-later)
     Authors:   Luna Nielsen
 */
-module nulib.system.glib.gerror;
+module nulib.glib.gerror;
 import nulib.string;
 import numem;
 
@@ -239,9 +239,19 @@ public:
     }
 }
 
-private:
-
 extern(C) @nogc nothrow:
+
+/**
+    Returns a canonical representation for string.
+    Interned strings can be compared for equality by 
+    comparing the pointers, instead of using strcmp().
+    
+    g_intern_static_string() does not copy the string,
+    therefore string must not be freed or modified.
+*/
+extern const(char)* g_intern_static_string(const(char)* str);
+
+private:
 
 // GQuark
 extern GQuark g_quark_from_static_string(const const(char)* str);

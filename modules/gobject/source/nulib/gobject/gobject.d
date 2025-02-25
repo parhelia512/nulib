@@ -7,32 +7,9 @@ import nulib.string;
 import core.attribute;
 
 /**
-    Offset into GObject vtable.
-*/
-struct g_vtbl_offset { size_t offset; }
-
-/**
     Size of a pointer.
 */
 enum g_ptr_size = (void*).sizeof;
-
-template GObjectVTableOffset(T) if (is(T : GTypeClass)) {
-    template baseType(X) {
-        static if (is(X Y == super))
-            alias baseType = Y;
-    }
-
-    alias offsets = getUDAs!(T, g_vtbl_offset);
-    static if (!is(T == GTypeClass)) {
-        static if (offsets.length > 0) {
-            enum GObjectVTableOffset = offsets[0].offset + GObjectVTableOffset!(baseType!T);
-        } else {
-            enum GObjectVTableOffset = GObjectVTableOffset!(baseType!T);
-        }
-    } else {
-        enum GObjectVTableOffset = 0;
-    }
-}
 
 /**
     Wraps $(D g_object_ref) to be compatible with the hybrid GObject-
@@ -56,6 +33,15 @@ void d_object_unref(GObject obj) @nogc nothrow {
     g_object_unref(
         g_object_realign(obj)
     );
+}
+
+/**
+    Generates dummy fields to inject into the VTable.
+*/
+mixin template G_DUMMY(size_t count) {
+    static foreach(i; 0..count) {
+        mixin("abstract void __DUMMY_", typeof(this), __LINE__, "();");
+    }
 }
 
 /**

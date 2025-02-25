@@ -4,6 +4,7 @@ import nulib.gtype;
 import numem.object;
 import numem.core.traits;
 import nulib.string;
+import core.attribute;
 
 /**
     Offset into GObject vtable.
@@ -68,17 +69,14 @@ private:
     uint ref_count;
     void* qdata;
 
-protected:
-    override size_t g_vtbl_padding() { return g_ptr_size*3; }
-
 public:
-    void setProperty(uint propertyId, const(void)*, void* pspec);
-    void getProperty(uint propertyId, void*, void* pspec);
-    void dispose();
-    void finalize();
-    void dispatchPropertiesChanged(uint npspecs, ref void* pspecs);
-    void notify(void* pspec);
-    void constructed();
+    abstract void setProperty(uint propertyId, const(void)*, void* pspec);
+    abstract void getProperty(uint propertyId, void*, void* pspec);
+    abstract void dispose();
+    abstract void finalize();
+    abstract void dispatchPropertiesChanged(uint npspecs, void** pspecs);
+    abstract void notify(void* pspec);
+    abstract void constructed();
 
     /**
         Creates a new instance of the given type.
@@ -127,11 +125,14 @@ public:
 size_t _g_d_vtbl_offset0 = __traits(getVirtualIndex, GTypeClass.g_vtbl_padding);
 size_t _g_d_vtbl_offset1 = __traits(getVirtualIndex, GTypeClass.g_type_initializer);
 
-private
+/**
+    The lowest level base class of the GObject Type System.
+
+    This can not be directly created, and shouldn't be.
+*/
 class GTypeClass : NuObject {
 extern(D):
-@nogc:
-private:
+@nogc private:
     GTypeInstance g_type_instance;
 
 protected:
@@ -139,7 +140,7 @@ protected:
     /**
         Gets the offset of vtable's beginning.
     */
-    size_t g_vtbl_padding() { return g_ptr_size; }
+    ptrdiff_t g_vtbl_padding() { return 3; }
 
     /**
         Gets the name of the initializer for this type.

@@ -28,7 +28,9 @@ bool g_object_has_d_type(TypeInfo_Class ti) {
 */
 extern(C)
 void g_object_register_d_type(TypeInfo_Class ti) {
-    g_assert(GObject.classinfo.base.isBaseOf(ti), "D Types need to inherit from GTypeClass!");
+    g_assert(_g_get_base_type().isBaseOf(ti), "D Types need to inherit from GTypeClass!");
+    if (ti is _g_get_base_type())
+        return;
 
     nstring g_class_name = _g_extract_class_name(ti);
     GType type = _g_object_try_get_type(ti);
@@ -53,6 +55,11 @@ GType g_object_get_d_type(TypeInfo_Class ti) {
     GType type = _g_object_try_get_type(ti);
     if (type == G_TYPE_INVALID) {
         g_object_register_d_type(ti);
+    }
+    
+    type = _g_object_try_get_type(ti);
+    if (type == G_TYPE_INVALID) {
+        return G_TYPE_NONE;
     }
 
     return _g_object_try_get_type(ti);
@@ -135,9 +142,16 @@ bool _g_version_compatible(uint major, uint minor, uint patch = 0) {
     Fixup a GObject-derived class using a D TypeInfo.
 */
 void _g_object_fixup(GType g_type, TypeInfo_Class ti) {
-    d_log(G_LOG_LEVEL_DEBUG, "Running fixups for %s...", g_type_name(g_type));
 
-    // TODO: Blit VTable properly via traversal.
+    // Handle dependency objects
+    if (ti.base !is _g_get_base_type()) {
+        auto parent = g_object_get_d_type(ti.base);
+        if (parent != G_TYPE_NONE && !_G_TYPE_MAP.contains(parent)) {
+            g_object_register_d_type(ti.base);
+        }
+    }
+
+    d_log(G_LOG_LEVEL_DEBUG, "Running fixups for %s...", g_type_name(g_type));
     _G_D_VTABLE_REGISTRY[cast(void*)ti] = ti.vtbl.nu_dup;
     _g_object_blit_d_vtbls(_G_D_VTABLE_REGISTRY[cast(void*)ti], ti);
     _g_object_fixup_vtbls(g_type, ti, ti);
@@ -159,6 +173,16 @@ auto _g_object_blit_d_vtbls(void*[] vtbl, TypeInfo_Class target) {
     }
 }
 
+T* _g_object_vtbl_entry(T)(TypeInfo_Class ti, size_t offset) {
+    if (ti.vtbl[offset])
+        return cast(T*)ti.vtbl[offset];
+
+    if (_G_D_VTABLE_REGISTRY.contains(cast(void*)ti))
+        return cast(T*)_G_D_VTABLE_REGISTRY[cast(void*)ti][offset];
+    
+    return null;
+}
+
 // Recursively traverses ti until it finds a vtbl entry for the given
 // index, or returns null if no entries for that was found.
 void* _g_find_first_sym_ptr(ref TypeInfo_Class ti, size_t index) {
@@ -174,10 +198,9 @@ void* _g_find_first_sym_ptr(ref TypeInfo_Class ti, size_t index) {
 
 // Overwrites D vtbl entries that are still 0.
 auto _g_object_fixup_vtbls(GType g_type, TypeInfo_Class ti, TypeInfo_Class target) {
-
     if (ti is _g_get_base_type()) {
         size_t padding = _g_object_get_ti_vtbl_padding(ti);
-        return _g_object_fixup_vtblc(_G_DVPTR_OFFSET, padding);
+        return _g_object_fixup_vtblc(_G_DVPTR_OFFSET, 3);
     }
 
     GTypeQuery query;
@@ -194,14 +217,13 @@ auto _g_object_fixup_vtbls(GType g_type, TypeInfo_Class ti, TypeInfo_Class targe
 
     size_t vtcount = target.vtbl.length - f_offset.d_offset;
     foreach(i; 0..vtcount) {
-        size_t g_offset = (f_offset.g_offset / g_ptr_size) + i;
+        size_t g_offset = f_offset.g_offset + i;
         size_t d_offset = f_offset.d_offset+i;
         auto g_table_entry = &(cast(void**)g_vtbl)[g_offset];
         auto d_table_entry = &(_G_D_VTABLE_REGISTRY[cast(void*)target][d_offset]);
         
         // Implementation was overwritten!
         if (*d_table_entry) {
-            debug d_log(G_LOG_LEVEL_WARNING, "gvtbl[%llu] = %p", g_offset, *d_table_entry);
             *g_table_entry = *d_table_entry;
             continue;
         }
@@ -211,13 +233,10 @@ auto _g_object_fixup_vtbls(GType g_type, TypeInfo_Class ti, TypeInfo_Class targe
             *d_table_entry = *g_table_entry;
             continue;
         }
-
-        debug d_log(G_LOG_LEVEL_WARNING, "%s[%llu] is undefined! (%llx)", query.type_name, d_offset, *d_table_entry);
-        // Nobody is the winner? undefined.
     }
 
     size_t padding = _g_object_get_ti_vtbl_padding(ti);
-    return _g_object_fixup_vtblc(ti.vtbl.length, query.class_size+padding);
+    return _g_object_fixup_vtblc(ti.vtbl.length, (query.class_size / g_ptr_size)+padding);
 }
 
 /**
@@ -225,7 +244,7 @@ auto _g_object_fixup_vtbls(GType g_type, TypeInfo_Class ti, TypeInfo_Class targe
     wasn't overriden), then 0 will be returned, otherwise the given offset is returned.
 */
 size_t _g_object_get_ti_vtbl_padding(TypeInfo_Class ti) {
-    void* paddingFuncPtr = ti.vtbl[_g_d_vtbl_offset0];
+    void* paddingFuncPtr = _g_object_vtbl_entry!(void*)(ti, _g_d_vtbl_offset0);
     if (!paddingFuncPtr)
         return 0;
 
@@ -272,14 +291,9 @@ GType _g_object_try_get_type(TypeInfo_Class ti) {
 nstring _g_get_type_initializer_name(TypeInfo_Class ti, const(char)[] typeName) {
     nstring out_;
 
-    // Type has an initializer declared.
-    auto typeInit = _g_object_try_get_vtbl_function!(immutable(char)[])(
-        ti.vtbl, 
-        _g_d_vtbl_offset1
-    );
-
-    if (typeInit) {
-        out_ ~= typeInit(null);
+    if (auto typeInitPtr = ti.vtbl[_g_d_vtbl_offset1]) {
+        auto typeInitFunc = cast(immutable(char)[] function(void*) @nogc nothrow)typeInitPtr;
+        out_ ~= typeInitFunc(null);
     } else {
         nstring g_d_typename = ti.name;
 
@@ -361,6 +375,8 @@ TypeInfo_Class _g_get_base_type() {
     return typeid(GObject).base;
 }
 
+enum _GOBJECT_VTBL_BEGIN_PADDING = 3;
+
 /**
     Variable used by the fixup function to properly align the vtables.
 
@@ -402,3 +418,9 @@ export __gshared static weak_map!(void*, void*[]) _G_D_VTABLE_REGISTRY;
 */
 extern(C)
 export __gshared static GModule* _G_APPLICATION_SELF;
+
+/**
+    Symbol which is always null.
+*/
+extern(C)
+export __gshared static void* _NULL_SYM = null;

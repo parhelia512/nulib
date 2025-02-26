@@ -1,1 +1,0 @@
-# Nulib GObject Glue

@@ -295,31 +295,6 @@ public:
     }
 }
 
-//
-//      C and D string handling utilities
-//
-
-@nogc pure nothrow {
-
-    /**
-        Gets a slice from a C string
-    */
-    inout(T)[] fromStringz(T)(inout(T)* cString) if (isSomeChar!T)  {
-        return cString ? cString[0 .. cstrlen!T(cString)] : null;
-    }
-
-    /**
-        Gets the length of a C-style string
-    */
-    size_t cstrlen(T)(inout(T)* s) if (isSomeChar!T)  {
-        const(T)* p = s;
-        while (*p)
-            ++p;
-        
-        return p - s;
-    }
-}
-
 @("vector-of-strings")
 unittest {
     import nulib.string : nstring;

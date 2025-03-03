@@ -94,6 +94,21 @@ private:
         } else {
             nogc_initialize(range);
         }
+
+        // Handle array rearrangement.
+        ptrdiff_t startIdx = cast(ptrdiff_t)(range.ptr - memory.ptr);
+        ptrdiff_t endIdx = startIdx+range.length;
+        size_t leftoverCount = (memory.length-endIdx);
+        if (startIdx >= 0) {
+            
+            // Shift old memory in
+            if (endIdx <= memory.length) {
+                nu_memmove(&memory[startIdx], &memory[endIdx], leftoverCount*T.sizeof);
+            }
+
+            // Hide the now invalid memory.
+            memory = memory[0..startIdx+leftoverCount];
+        }
     }
 
     // Range move algorithm.
@@ -247,6 +262,46 @@ public:
     }
 
     /**
+        Pops the back element of the vector.
+    */
+    void popBack() {
+        if (!empty) {
+            this.deleteRange(memory[$-1..$]);
+        }
+    }
+
+    /**
+        Removes an element from the vector matching the given element.
+    */
+    void remove(T element) {
+        foreach_reverse(i; 0..memory.length) {
+            if (memory[i] == element) {
+                this.removeAt(i);
+                return;
+            }
+        }
+    }
+
+    /**
+        Removes the element at the given index.
+    */
+    void removeAt(size_t i) {
+        if (i >= 0 && i < memory.length) {
+            this.deleteRange(memory[i .. i+1]);
+        }
+    }
+
+    /**
+        Removes the elements at the given index with the given
+        element count.
+    */
+    void removeAt(size_t i, size_t count) {
+        if (i >= 0 && i+count < memory.length) {
+            this.deleteRange(memory[i .. i+count]);
+        }
+    }
+
+    /**
         Append a $(D T) to the vector.
 
         Params:
@@ -312,4 +367,28 @@ unittest {
     foreach(ref str; strs) {
         assert(str == "Hello, world!");
     }
+}
+
+@(".removeAt(index)")
+unittest {
+    vector!int numbers = [1, 0, 2, 3, 4];
+
+    numbers.removeAt(1);
+    assert(numbers == [1, 2, 3, 4]);
+}
+
+@(".removeAt(index, count)")
+unittest {
+    vector!int numbers = [0, 1, 2, 3, 4];
+
+    numbers.removeAt(1, 2);
+    assert(numbers == [0, 3, 4]);
+}
+
+@(".remove(element)")
+unittest {
+    vector!int numbers = [0, 1, 255, 2, 3, 4];
+
+    numbers.remove(255);
+    assert(numbers == [0, 1, 2, 3, 4]);
 }

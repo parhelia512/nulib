@@ -275,10 +275,28 @@ public:
     */
     void remove(T element) {
         foreach_reverse(i; 0..memory.length) {
-            if (memory[i] == element) {
-                this.removeAt(i);
-                return;
-            }
+
+            // NOTE:    DRuntime's opEquals implementation is not nogc
+            //          as such we need to check whether we can do an equals comparison
+            //          in a nogc context.
+            //          Otherwise, we try calling opEquals directly, if that fails we try
+            //          the `is` operator, and finally if that fails we assert at compile-time.
+            static if (is(typeof(() @nogc { return T.init == T.init; }))) {
+                if (memory[i] == element) {
+                    this.removeAt(i);
+                    return;
+                }
+            } else static if (is(typeof(() @nogc { return T.init.opEquals(T.init); }))) {
+                if (memory[i].opEquals(element)) {
+                    this.removeAt(i);
+                    return;
+                }
+            } else static if (is(typeof(() @nogc { return T.init is T.init; }))) {
+                if (memory[i] is element) {
+                    this.removeAt(i);
+                    return;
+                }
+            } else static assert(0, "Failed to find a nogc comparison method!");
         }
     }
 

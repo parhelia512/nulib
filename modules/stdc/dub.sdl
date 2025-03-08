@@ -1,0 +1,15 @@
+name "stdc"
+description "C99 API"
+targetType "library"
+targetPath "out/"
+
+dependency "numem" version="*"
+
+configuration "library" {
+    targetType "library"
+}
+
+configuration "unittest" {
+    targetType "autodetect"
+    dependency "silly" version="~>1.1.1"
+}

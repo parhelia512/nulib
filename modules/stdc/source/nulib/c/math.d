@@ -8,7 +8,7 @@
 */
 module nulib.c.math;
 
-extern(C) nothrow @nogc:
+extern(C) nothrow @nogc pure:
 
 /**
     Computes the absolute value for the given value.

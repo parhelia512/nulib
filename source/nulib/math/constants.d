@@ -11,7 +11,7 @@
         PI = &pi;
         SQRT = &radic;
         HALF = &frac12;
- */
+*/
 module nulib.math.constants;
 
 // Values obtained from Wolfram Alpha. 116 bits ought to be enough for anybody.

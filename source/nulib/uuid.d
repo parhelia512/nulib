@@ -38,7 +38,7 @@ private:
             ushort clk_seq;
             ubyte[6] node;
         }
-        ubyte[16] data;
+        ubyte[16] bdata;
         ulong[2] ldata;
     }
     
@@ -47,12 +47,13 @@ private:
     }
 
 public:
+    @property data() { return this.bdata; }
 
     /**
         Constructs a UUID from the specified byte slice
     */
     this(ubyte[16] bytes) {
-        this.data = bytes;
+        this.bdata = bytes;
         this.time_low = nu_ntoh(this.time_low);
         this.time_mid = nu_ntoh(this.time_mid);
         this.time_hi_and_version = nu_ntoh(this.time_hi_and_version);
@@ -213,12 +214,12 @@ public:
     */
     ubyte[16] toBytes() {
         UUID datacopy;
-        datacopy.data[0..$] = data[0..$];
+        datacopy.bdata[0..$] = bdata[0..$];
 
         datacopy.time_low = nu_ntoh(this.time_low);
         datacopy.time_mid = nu_ntoh(this.time_mid);
         datacopy.time_hi_and_version = nu_ntoh(this.time_hi_and_version);
-        return datacopy.data;
+        return datacopy.bdata;
     }
 
     /**

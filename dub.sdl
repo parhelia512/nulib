@@ -5,6 +5,7 @@ copyright "Copyright © 2025, Luna"
 license "BSL-1.0"
 
 dependency "numem" version=">=1.0.5"
+dependency "nulib:stdc" version="*"
 
 // Basic configuration
 targetPath "out/"
@@ -12,6 +13,7 @@ targetPath "out/"
 // Sub-packages
 subPackage "modules/com"
 subPackage "modules/objc"
+subPackage "modules/stdc"
 
 // Needed for ddox.
 dflags "-oq" platform="ldc"

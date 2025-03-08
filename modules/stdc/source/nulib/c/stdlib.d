@@ -45,3 +45,28 @@ extern int atoi(const(char)* str);
         $(D 0) on failure.
 */
 extern long atoll(const(char)* str);
+
+
+/// These two were added to Bionic in Lollipop.
+int     rand() @trusted;
+
+///
+void    srand(uint seed) @trusted;
+
+///
+noreturn abort() @safe;
+
+///
+noreturn exit(int status);
+
+///
+int     atexit(void function() func);
+
+///
+noreturn _Exit(int status);
+
+///
+char*   getenv(scope const char* name);
+
+///
+int     system(scope const char* string);

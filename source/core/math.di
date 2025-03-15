@@ -16,7 +16,9 @@ module core.math;
 //          D Math Intrinsics
 //
 
-version(LLVM) {
+version(LDC) {
+public:
+@nogc nothrow @safe pure:
     import ldc.intrinsics;
 
     alias sin = llvm_sin!float;

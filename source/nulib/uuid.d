@@ -2,6 +2,7 @@ module nulib.uuid;
 import nulib.random;
 import nulib.string;
 import nulib.memory.endian;
+import nulib.text.ascii;
 import nulib.conv;
 import numem;
 
@@ -92,7 +93,6 @@ public:
             $(D false) otherwise.
     */
     static bool validate(string slice) {
-        import std.ascii;
 
         // Incorrect length
         if (slice.length != UUIDStringLength)
@@ -109,7 +109,7 @@ public:
             }
 
             // Hex positions
-            if (!isHexDigit(slice[i]))
+            if (!isHex(slice[i]))
                 return false;
         }
 

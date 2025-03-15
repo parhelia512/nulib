@@ -39,7 +39,7 @@ extern long llabs(long value);
 */
 extern double fmod(double x, double y);
 /// ditto
-extern float fmodf(float x, double y);
+extern float fmodf(float x, float y);
 
 /**
     Computes the remainder of the floating point division.
@@ -57,7 +57,7 @@ extern float fmodf(float x, double y);
 */
 extern double remainder(double x, double y);
 /// ditto
-extern float remainderf(float x, double y);
+extern float remainderf(float x, float y);
 
 /**
     Computes the fused-multiply-add operation.

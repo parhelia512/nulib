@@ -41,7 +41,7 @@ public:
             return nogc_new!Process(cast(Handle)getpid());
         } else {
 
-            return nogc_new!Process(0);
+            return nogc_new!Process(cast(Handle)0);
         }
     }
 

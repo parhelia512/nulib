@@ -15,6 +15,8 @@ subPackage "modules/com"
 subPackage "modules/objc"
 subPackage "modules/stdc"
 
+buildRequirements "allowWarnings" platform="gdc"
+
 // Needed for ddox.
 dflags "-oq" platform="ldc"
 x:ddoxFilterArgs "--min-protection=Public" \

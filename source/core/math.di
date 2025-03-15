@@ -212,6 +212,28 @@ public:
         }
         return vf;
     }
+
+    // Only on X87.
+    static if (real.mant_dig == 64) {
+        pragma(inline, true):
+
+        // y * log2(x)
+        real yl2x(real x, real y)
+        {
+            real r = void;
+            asm @trusted pure nothrow @nogc { "fyl2x" : "=st" (r) : "st(1)" (y), "st" (x) : "st(1)", "flags"; }
+            return r;
+        }
+
+        // y * log2(x + 1)
+        real yl2xp1(real x, real y)
+        {
+            real r = void;
+            asm @trusted pure nothrow @nogc { "fyl2xp1" : "=st" (r) : "st(1)" (y), "st" (x) : "st(1)", "flags"; }
+            return r;
+        }
+    }
+
 } else {
 
     /**

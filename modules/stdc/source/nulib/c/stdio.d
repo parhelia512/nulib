@@ -15,6 +15,7 @@ extern(C) nothrow @nogc:
 
     Params:
         format = The format string.
+        ...    = Arguments following `format`.
 
     Returns:
         On success, the total number of characters written is returned.
@@ -27,8 +28,9 @@ extern int printf(const(char)* format, ...) @trusted pure;
 
     Params:
         buffer =    The buffer to write to.
-        size =      The size of the buffer.
+        size   =    The size of the buffer.
         format =    The format string.
+        ...    =    Arguments following `format`.
 
     Returns:
         On success, the total number of characters written is returned.
@@ -44,6 +46,7 @@ extern int snprintf(char* buffer, size_t size, const(char)* format, ...) @truste
     Params:
         buffer =    The buffer to write to.
         format =    The format string.
+        ...    =    Arguments following `format`.
 
     Returns:
         On success, the total number of characters written is returned.
@@ -58,6 +61,7 @@ extern int sprintf(char* buffer, const(char)* format, ...) @system pure;
 
     Params:
         format = The format string.
+        ...    = Arguments following `format`.
 
     Returns:
         The amount of items successfully filled.
@@ -71,6 +75,7 @@ extern int scanf(const(char)* format, ...) @trusted pure;
     Params:
         s       = The input string.
         format  = The format string.
+        ...     = Arguments following `format`.
 
     Returns:
         The amount of items successfully filled.

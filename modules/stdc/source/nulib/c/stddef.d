@@ -12,14 +12,21 @@
 module nulib.c.stddef;
 
 extern (C):
-@trusted: // Types only.
 nothrow:
 @nogc:
 
 ///
 alias nullptr_t = typeof(null);
 
-// size_t and ptrdiff_t are defined in the object module.
-
 ///
-alias wchar wchar_t;
+version (Windows) {
+    alias wchar_t = wchar;
+} else version (Posix) {
+    alias wchar_t = dchar;
+} else version (WASI) {
+    alias wchar_t = dchar;
+} else {
+
+    // Fallback for other platforms.
+    alias wchar_t = wchar;
+}

@@ -347,7 +347,7 @@ public:
         Params:
             value = The value to append.
     */
-    void opOpAssign(string op = "~")(ref auto T value) @trusted {
+    void opOpAssign(string op = "~")(auto ref T value) @trusted {
         this.resizeImpl(length+1);
 
         static if (hasElaborateMove!T) {

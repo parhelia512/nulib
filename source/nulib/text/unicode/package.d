@@ -83,7 +83,7 @@ Endianess getEndianFromBOM(codepoint c) @safe {
 /**
     Decodes a string
 */
-UnicodeSequence decode(T)(ref auto T str, bool stripBOM = false) if (isSomeSafeString!T) {
+UnicodeSequence decode(T)(auto ref T str, bool stripBOM = false) if (isSomeSafeString!T) {
     static if (StringCharSize!T == 1)
         return utf8.decode(str);
     else static if (StringCharSize!T == 2)
@@ -97,7 +97,7 @@ UnicodeSequence decode(T)(ref auto T str, bool stripBOM = false) if (isSomeSafeS
 /**
     Encodes a string
 */
-T encode(T)(ref auto UnicodeSequence seq, bool addBOM = false) if (isSomeNString!T) {
+T encode(T)(auto ref UnicodeSequence seq, bool addBOM = false) if (isSomeNString!T) {
     static if (StringCharSize!T == 1)
         return utf8.encode(seq);
     else static if (StringCharSize!T == 2)
@@ -113,7 +113,7 @@ T encode(T)(ref auto UnicodeSequence seq, bool addBOM = false) if (isSomeNString
 
     This will always create a copy.
 */
-ref auto toUTF8(FromT)(ref auto FromT from) if (isSomeSafeString!FromT) {
+auto ref toUTF8(FromT)(auto ref FromT from) if (isSomeSafeString!FromT) {
     static if (StringCharSize!FromT == 1)
         return nstring(from);
     else
@@ -125,7 +125,7 @@ ref auto toUTF8(FromT)(ref auto FromT from) if (isSomeSafeString!FromT) {
 
     This will always create a copy.
 */
-ref auto toUTF16(FromT)(ref auto FromT from, bool addBOM = false) if (isSomeSafeString!FromT) {
+auto ref toUTF16(FromT)(auto ref FromT from, bool addBOM = false) if (isSomeSafeString!FromT) {
     static if (StringCharSize!FromT == 2)
         return nwstring(from);
     else
@@ -137,7 +137,7 @@ ref auto toUTF16(FromT)(ref auto FromT from, bool addBOM = false) if (isSomeSafe
 
     This will always create a copy.
 */
-ref auto toUTF32(FromT)(ref auto FromT from, bool addBOM = false) if (isSomeSafeString!FromT) {
+auto ref toUTF32(FromT)(auto ref FromT from, bool addBOM = false) if (isSomeSafeString!FromT) {
     static if (StringCharSize!FromT == 2)
         return ndstring(from);
     else

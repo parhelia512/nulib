@@ -318,7 +318,7 @@ public:
     /**
         Appends a character to this string.
     */
-    void opOpAssign(string op = "~")(ref auto inout(T) value) @trusted {
+    void opOpAssign(string op = "~")(auto ref inout(T) value) @trusted {
         this.resizeImpl(length+1);
         this.setCharImpl(cast(void*)(&memory[$-1]), value);
     }

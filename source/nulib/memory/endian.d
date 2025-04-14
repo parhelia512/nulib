@@ -64,7 +64,7 @@ T nu_flip_bytes(T)(T in_) @system @nogc nothrow {
 /**
     Converts big endian type to system endianness.
 */
-T nu_betoh(T)(T in_) @system @nogc nothrow {
+T nu_betoh(T)(T in_) @trusted @nogc nothrow {
     return etoh!(T, Endianess.bigEndian)(in_);
 }
 
@@ -78,7 +78,7 @@ T nu_betoh(T)(T in_) @system @nogc nothrow {
     Returns:
         A slice of the input, pointing to the same memory.
 */
-T[] nu_betoh(T)(T[] in_) @system @nogc nothrow {
+T[] nu_betoh(T)(T[] in_) @trusted @nogc nothrow {
     foreach_reverse(ref element; in_)
         element = nu_betoh(element);
     
@@ -88,7 +88,7 @@ T[] nu_betoh(T)(T[] in_) @system @nogc nothrow {
 /**
     Converts little endian type to system endianness.
 */
-T nu_letoh(T)(T in_) @system @nogc nothrow {
+T nu_letoh(T)(T in_) @trusted @nogc nothrow {
     return etoh!(T, Endianess.littleEndian)(in_);
 }
 
@@ -102,9 +102,49 @@ T nu_letoh(T)(T in_) @system @nogc nothrow {
     Returns:
         A slice of the input, pointing to the same memory.
 */
-T[] nu_letoh(T)(T[] in_) @system @nogc nothrow {
+T[] nu_letoh(T)(T[] in_) @trusted @nogc nothrow {
     foreach_reverse(ref element; in_)
         element = nu_letoh(element);
+    
+    return in_;
+}
+
+/**
+    Converts bytes between system and the given endianness.
+
+    This essentially flips the byte-order within the type if
+    the given endianness does not match the system endiannes.
+
+    Params:
+        in_ = the range to flip the individual values within.
+
+    Returns:
+        A slice of the input, pointing to the same memory.
+*/
+T[] nu_etoh(T)(T[] in_, Endianess endian) @trusted @nogc nothrow {
+    if (endian != NATIVE_ENDIAN) 
+        foreach_reverse(ref element; in_)
+            element = nu_flip_bytes!T(in_);
+    
+    return in_;
+}
+
+/**
+    Converts bytes between system and the given endianness.
+
+    This essentially flips the byte-order within the type if
+    the given endianness does not match the system endiannes.
+
+    Params:
+        in_ = the range to flip the individual values within.
+
+    Returns:
+        A slice of the input, pointing to the same memory.
+*/
+T[] nu_etoh(T, Endianess endian)(T[] in_) @trusted @nogc nothrow {
+    static if (endian != NATIVE_ENDIAN) 
+        foreach_reverse(ref element; in_)
+            element = nu_flip_bytes!T(in_);
     
     return in_;
 }

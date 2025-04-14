@@ -37,21 +37,21 @@ enum codepoint UNICODE_BOM = 0xFEFF;
 /**
     Validates whether the codepoint is within spec
 */
-bool validate(codepoint code) {
+bool validate(codepoint code) @safe {
     return code <= 0x10FFFF && !hasSurrogatePairs(code);
 }
 
 /**
     Gets whether the codepoint mistakenly has surrogate pairs encoded within it.
 */
-bool hasSurrogatePairs(codepoint code) {
+bool hasSurrogatePairs(codepoint code) @safe {
     return (code >= 0x0000D800 && code <= 0x0000DFFF);
 }
 
 /**
     Gets whether the character is a BOM
 */
-bool isBOM(codepoint c) {
+bool isBOM(codepoint c) @safe {
     return isLittleEndianBOM(c) || isBigEndianBOM(c); 
 }
 
@@ -59,7 +59,7 @@ bool isBOM(codepoint c) {
     Gets whether the byte order mark is little endian
 */
 pragma(inline, true)
-bool isLittleEndianBOM(codepoint c) {
+bool isLittleEndianBOM(codepoint c) @safe {
     return (c == 0xFFFE0000 || c == 0x0000FFFE);
 }
 
@@ -67,14 +67,14 @@ bool isLittleEndianBOM(codepoint c) {
     Gets whether the byte order mark is big endian
 */
 pragma(inline, true)
-bool isBigEndianBOM(codepoint c) {
+bool isBigEndianBOM(codepoint c) @safe {
     return (c == 0xFEFF0000 || c == 0x0000FEFF);
 }
 
 /**
     Gets the endianess from a BOM
 */
-Endianess getEndianFromBOM(codepoint c) {
+Endianess getEndianFromBOM(codepoint c) @safe {
     return isBigEndianBOM(c) ? 
         Endianess.bigEndian : 
         Endianess.littleEndian;

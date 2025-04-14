@@ -273,6 +273,19 @@ public:
     }
 
     /**
+        Constructs a string with the given size.
+        The contents of the string will be zero-initialized.
+    */
+    this(uint size) {
+        if (__ctfe) {
+            this.memory.length = size;
+        } else {
+            this.resize(size);
+            nogc_zeroinit(this.memory);
+        }
+    }
+
+    /**
         Clears the string, equivalent to resizing it to 0.
     */
     void clear() {

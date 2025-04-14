@@ -189,6 +189,9 @@ public:
     /**
         Creates a new vector from a slice.
 
+        Params:
+            rhs = slice to copy or move data from.
+
         Notes:
             Elements will either be copied or moved out of the
             source slice. Pointers will only be weakly referenced.
@@ -212,6 +215,9 @@ public:
 
     /**
         Copy-constructor
+
+        Params:
+            rhs = slice to copy or move data from.
     */
     this(ref return scope inout(SelfType) rhs) @trusted {
         if (__ctfe) {
@@ -225,6 +231,22 @@ public:
                 this.resizeImpl(rhs.length);
                 nogc_copy(memory, cast(SelfType)rhs);
             }
+        }
+    }
+
+    /**
+        Constructs a new vector with $(D reserved) amount of 
+        elements worth of memory reserved.
+
+        Params:
+            reserved = How many elements of memory to reserve.
+    */
+    this(size_t reserved) {
+        if (__ctfe) {
+            this.memory.length = reserved;
+            this.memoryCapacity = reserved;
+        } else {
+            this.reserve(reserved);
         }
     }
 

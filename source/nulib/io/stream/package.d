@@ -54,21 +54,34 @@ enum StreamError : ptrdiff_t {
         Operation attempted to access out-of-range indices.
     */
     outOfRange = -2,
+
+    /**
+        Stream is in an invalid state; such as a file handle
+        being closed.
+    */
+    invalidState = -3,
 }
 
 enum StreamError
     STREAM_ERROR_EOF = StreamError.eof,                     /// End of file reached.
     STREAM_ERROR_NOT_SUPPORTED = StreamError.notSupported,  /// Operation is not supported by the stream.
-    STREAM_ERROR_OUT_OF_RANGE = StreamError.outOfRange;     /// Operation attempted to access out-of-range indices.
+    STREAM_ERROR_OUT_OF_RANGE = StreamError.outOfRange,     /// Operation attempted to access out-of-range indices.
+    STREAM_ERROR_INVALID_STATE = StreamError.invalidState;  /// Stream is in an invalid state.
 
 /**
     A stream that can either be read from or written to.
 
     This is the base class of all stream related classes.
+
+    Note:
+        Stream objects should always be nothrow; use error
+        codes as provided by $(D StreamError) to specify 
+        failure states.
 */
 abstract
-class Stream {
-@nogc nothrow:
+class Stream : NuObject {
+@nogc nothrow @safe:
+public:
 
     /**
         Whether the stream can be read from.
@@ -209,6 +222,11 @@ class Stream {
 /**
     An exception that can be thrown to indicate that a required operation
     is not supported by the given stream.
+
+    Note:
+        These exceptions are there for convenience for wrappers built
+        on top of the base stream interface; such as stream readers/writers.
+        The core functionality of streams will never throw.
 */
 class StreamUnsupportedException : NuException {
 @nogc:
@@ -231,5 +249,71 @@ public:
     */
     this(Stream stream, string file = __FILE__, size_t line = __LINE__) {
         super("The requested operation is not supported by the stream!", null, file, line);
+    }
+}
+
+/**
+    An exception that can be thrown to indicate that a read operation
+    failed.
+
+    Note:
+        These exceptions are there for convenience for wrappers built
+        on top of the base stream interface; such as stream readers/writers.
+        The core functionality of streams will never throw.
+*/
+class StreamReadException : NuException {
+@nogc:
+public:
+
+    /**
+        The stream the exception applies to.
+    */
+    Stream stream;
+
+    // Destructor.
+    ~this() {
+
+        // Ensure this doesn't end up getting freed.
+        stream = null;
+    }
+
+    /**
+        Constructor.
+    */
+    this(Stream stream, string reason, string file = __FILE__, size_t line = __LINE__) {
+        super(reason, null, file, line);
+    }
+}
+
+/**
+    An exception that can be thrown to indicate that a write operation
+    failed.
+
+    Note:
+        These exceptions are there for convenience for wrappers built
+        on top of the base stream interface; such as stream readers/writers.
+        The core functionality of streams will never throw.
+*/
+class StreamWriteException : NuException {
+@nogc:
+public:
+
+    /**
+        The stream the exception applies to.
+    */
+    Stream stream;
+
+    // Destructor.
+    ~this() {
+
+        // Ensure this doesn't end up getting freed.
+        stream = null;
+    }
+
+    /**
+        Constructor.
+    */
+    this(Stream stream, string reason, string file = __FILE__, size_t line = __LINE__) {
+        super(reason, null, file, line);
     }
 }

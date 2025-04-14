@@ -10,6 +10,9 @@
 */
 module nulib.io.stream.rw;
 import nulib.io.stream;
+import nulib.memory.endian;
+import nulib.text.unicode;
+import nulib.string;
 import numem;
 
 /**
@@ -17,25 +20,281 @@ import numem;
     read data from streams.
 */
 final
-class StreamReader {
+class StreamReader : NuObject {
 @nogc:
 private:
     Stream stream;
 
+    // Reads a sequence of bytes and ensures their endianness is correct.
+    // Additionally does a type-cast
+    pragma(inline, true)
+    T readEndian(T, Endianess endian)() @trusted if (__traits(isScalar, T)) {
+        ubyte[T.sizeof] data;
+        ptrdiff_t l = stream.read(data);
+        
+        if (l <= 0)
+            return T.init;
+    
+        return nu_etoh!(T, endian)(data);
+    }
+
+    // Reads a sequence of bytes and ensures their endianness is correct.
+    pragma(inline, true)
+    T[] readEndianSeq(T, Endianess endian)(size_t count) @trusted if (__traits(isScalar, T)) {
+        T[] buffer = nu_resize(buffer, count, 1);
+        ubyte[] bufferView = (cast(ubyte*)buffer.ptr)[0..count*T.sizeof];
+
+        ptrdiff_t read = stream.read(bufferView);
+        return nu_etoh!(T, endian)(nu_resize(buffer, read <= 0 ? 0 : read, 1));
+    }
+
 public:
+@safe:
     this(Stream stream) {
         enforce(stream.canRead(), nogc_new!StreamUnsupportedException(stream));
         this.stream = stream;
     }
-}
 
+    /**
+        Reads a float from the stream.
+        
+        Returns:
+            The read value.
+    */
+    float readF32LE() { return readEndian!(float, Endianess.littleEndian)(); }
+    float readF32BE() { return readEndian!(float, Endianess.bigEndian)(); } /// ditto
+
+    /**
+        Reads a double from the stream.
+        
+        Returns:
+            The read value.
+    */
+    double readF64LE() { return readEndian!(double, Endianess.littleEndian)(); }
+    double readF64BE() { return readEndian!(double, Endianess.bigEndian)(); } /// ditto
+
+    /**
+        Reads a byte from the stream.
+        
+        Returns:
+            The read value.
+    */
+    byte readI8() { return cast(byte)readU8(); }
+
+    /**
+        Reads a short from the stream.
+        
+        Returns:
+            The read value.
+    */
+    short readI16LE() { return readEndian!(short, Endianess.littleEndian)(); }
+    short readI16BE() { return readEndian!(short, Endianess.bigEndian)(); } /// ditto
+
+    /**
+        Reads a int from the stream.
+        
+        Returns:
+            The read value.
+    */
+    int readI32LE() { return readEndian!(int, Endianess.littleEndian)(); }
+    int readI32BE() { return readEndian!(int, Endianess.bigEndian)(); } /// ditto
+
+    /**
+        Reads a long from the stream.
+        
+        Returns:
+            The read value.
+    */
+    long readI64LE() { return readEndian!(long, Endianess.littleEndian)(); }
+    long readI64BE() { return readEndian!(long, Endianess.bigEndian)(); } /// ditto
+
+    /**
+        Reads a ubyte from the stream.
+        
+        Returns:
+            The read value.
+    */
+    ubyte readU8() {
+        ubyte[1] buffer;
+        stream.read(buffer);
+        return buffer[0];
+    }
+
+    /**
+        Reads a ushort from the stream.
+        
+        Returns:
+            The read value.
+    */
+    ushort readU16LE() { return readEndian!(ushort, Endianess.littleEndian)(); }
+    ushort readU16BE() { return readEndian!(ushort, Endianess.bigEndian)(); } /// ditto
+
+    /**
+        Reads a uint from the stream.
+        
+        Returns:
+            The read value.
+    */
+    uint readU32LE() { return readEndian!(uint, Endianess.littleEndian)(); }
+    uint readU32BE() { return readEndian!(uint, Endianess.bigEndian)(); } /// ditto
+
+    /**
+        Reads a ulong from the stream.
+        
+        Returns:
+            The read value.
+    */
+    ulong readU64LE() { return readEndian!(ulong, Endianess.littleEndian)(); }
+    ulong readU64BE() { return readEndian!(ulong, Endianess.bigEndian)(); } /// ditto
+
+    /**
+        Reads a UTF8 string from the stream.
+        
+        Returns:
+            The UTF8 string read from the stream.
+    */
+    nstring readUTF8(uint length) {
+        nstring str = nstring(length);
+
+        ptrdiff_t read = stream.read(str.ptr);
+        if (read <= 0) {
+            str.resize(0);
+            return str;
+        }
+
+        str.resize(read);
+        return str;
+    }
+
+    /**
+        Reads a UTF16 string from the stream.
+
+        This function determines endianness from the byte-order-mark
+        in the stream; if none is found an exception is thrown.
+
+        Params:
+            length = the length of the string to read, including BOM.
+        
+        Returns:
+            The UTF16 string read from the stream.
+    */
+    nwstring readUTF16(uint length) {
+        wchar[] buffer = this.readEndianSeq!(wchar, NATIVE_ENDIAN)(length);
+        codepoint bom = getBOM(buffer);
+
+        if (!bom) {
+            
+            // Clear buffer.
+            buffer = nu_resize(buffer, 0, 1);
+            throw nogc_new!StreamReadException(stream, "UTF16 string did not have a BOM!");
+        }
+
+        // Copy UTF-16 string out.
+        nwstring out_ = nwstring(nu_etoh!wchar(buffer, getEndianFromBOM(bom)));
+        buffer = nu_resize(buffer, 0, 1);
+        return out_;
+    }
+
+    /**
+        Reads a UTF16 string from the stream.
+
+        Params:
+            length = the length of the string to read, including BOM, if any.
+        
+        Returns:
+            The UTF16 string read from the stream.
+    */
+    nwstring readUTF16LE(uint length) {
+        wchar[] buffer = this.readEndianSeq!(wchar, Endianess.littleEndian)(length);
+        nwstring out_ = nwstring(buffer);
+        buffer = nu_resize(buffer, 0, 1);
+        return out_;
+    }
+
+    /**
+        Reads a UTF16 string from the stream.
+
+        Params:
+            length = the length of the string to read, including BOM, if any.
+        
+        Returns:
+            The UTF16 string read from the stream.
+    */
+    nwstring readUTF16BE(uint length) {
+        wchar[] buffer = this.readEndianSeq!(wchar, Endianess.bigEndian)(length);
+        nwstring out_ = nwstring(buffer);
+        buffer = nu_resize(buffer, 0, 1);
+        return out_;
+    }
+
+    /**
+        Reads a UTF32 string from the stream.
+
+        This function determines endianness from the byte-order-mark
+        in the stream; if none is found an exception is thrown.
+
+        Params:
+            length = the length of the string to read, including BOM.
+        
+        Returns:
+            The UTF32 string read from the stream.
+    */
+    ndstring readUTF32(uint length) {
+        dchar[] buffer = this.readEndianSeq!(dchar, NATIVE_ENDIAN)(length);
+        codepoint bom = getBOM(buffer);
+
+        if (!bom) {
+            
+            // Clear buffer.
+            buffer = nu_resize(buffer, 0, 1);
+            throw nogc_new!StreamReadException(stream, "UTF32 string did not have a BOM!");
+        }
+
+        // Copy UTF-16 string out.
+        ndstring out_ = ndstring(nu_etoh!dchar(buffer, getEndianFromBOM(bom)));
+        buffer = nu_resize(buffer, 0, 1);
+        return out_;
+    }
+
+    /**
+        Reads a UTF32 string from the stream.
+
+        Params:
+            length = the length of the string to read, including BOM, if any.
+        
+        Returns:
+            The UTF32 string read from the stream.
+    */
+    ndstring readUTF32LE(uint length) {
+        dchar[] buffer = this.readEndianSeq!(dchar, Endianess.littleEndian)(length);
+        ndstring out_ = ndstring(buffer);
+        buffer = nu_resize(buffer, 0, 1);
+        return out_;
+    }
+
+    /**
+        Reads a UTF32 string from the stream.
+
+        Params:
+            length = the length of the string to read, including BOM, if any.
+        
+        Returns:
+            The UTF32 string read from the stream.
+    */
+    ndstring readUTF32BE(uint length) {
+        dchar[] buffer = this.readEndianSeq!(dchar, Endianess.bigEndian)(length);
+        ndstring out_ = ndstring(buffer);
+        buffer = nu_resize(buffer, 0, 1);
+        return out_;
+    }
+}
 
 /**
     A stream writer is a helper class which makes it easier to
     write data to streams.
 */
 final
-class StreamWriter {
+class StreamWriter : NuObject {
 @nogc:
 private:
     Stream stream;

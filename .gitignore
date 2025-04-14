@@ -1,6 +1,7 @@
 .dub
 docs.json
 __dummy.html
+__dummy_docs/
 docs/
 /nulib
 nu*.dll

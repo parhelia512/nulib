@@ -117,6 +117,7 @@ T[] nu_letoh(T)(T[] in_) @trusted @nogc nothrow {
 
     Params:
         in_ = the range to flip the individual values within.
+        endian = The endianness to convert between.
 
     Returns:
         A slice of the input, pointing to the same memory.
@@ -124,7 +125,7 @@ T[] nu_letoh(T)(T[] in_) @trusted @nogc nothrow {
 T[] nu_etoh(T)(T[] in_, Endianess endian) @trusted @nogc nothrow {
     if (endian != NATIVE_ENDIAN) 
         foreach_reverse(ref element; in_)
-            element = nu_flip_bytes!T(in_);
+            element = nu_flip_bytes!T(element);
     
     return in_;
 }
@@ -144,7 +145,7 @@ T[] nu_etoh(T)(T[] in_, Endianess endian) @trusted @nogc nothrow {
 T[] nu_etoh(T, Endianess endian)(T[] in_) @trusted @nogc nothrow {
     static if (endian != NATIVE_ENDIAN) 
         foreach_reverse(ref element; in_)
-            element = nu_flip_bytes!T(in_);
+            element = nu_flip_bytes!T(element);
     
     return in_;
 }

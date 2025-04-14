@@ -48,7 +48,7 @@ public:
     /**
         Destructor.
     */
-    ~this() {
+    ~this() @trusted {
         if (buffer.length != 0)
             buffer = nu_resize(buffer, 0, 1);
         
@@ -62,7 +62,7 @@ public:
         Params:
             reserved = How many bytes to reserve.
     */
-    this(size_t reserved) {
+    this(size_t reserved) @trusted {
         buffer = nu_resize(buffer, reserved, 1);
     }
 
@@ -205,7 +205,7 @@ public:
         Closes the stream.
     */
     override
-    void close() {
+    void close() @trusted {
         if (buffer)
             buffer = nu_resize(buffer, 0, 1);
     }
@@ -225,7 +225,7 @@ public:
             $(D StreamError)
     */
     override
-    ptrdiff_t read(ref ubyte[] buffer) {
+    ptrdiff_t read(ubyte[] buffer) {
         ptrdiff_t start = rptr;
         ptrdiff_t end = rptr+buffer.length;
 
@@ -258,7 +258,7 @@ public:
             $(D StreamError)
     */
     override
-    ptrdiff_t write(ubyte[] buffer) {
+    ptrdiff_t write(ubyte[] buffer) @trusted {
         try {
             ptrdiff_t start = rptr;
             ptrdiff_t end = rptr+buffer.length;

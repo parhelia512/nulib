@@ -202,7 +202,7 @@ public:
         See_Also:
             $(D StreamError)
     */
-    abstract ptrdiff_t read(ref ubyte[] buffer);
+    abstract ptrdiff_t read(ubyte[] buffer);
 
     /**
         Writes bytes from the specified buffer in to the stream

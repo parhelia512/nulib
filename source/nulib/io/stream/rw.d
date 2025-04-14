@@ -35,22 +35,23 @@ private:
         if (l <= 0)
             return T.init;
     
-        return nu_etoh!(T, endian)(data);
+        return nu_etoh!(T, endian)(*(cast(T*)data.ptr));
     }
 
     // Reads a sequence of bytes and ensures their endianness is correct.
     pragma(inline, true)
     T[] readEndianSeq(T, Endianess endian)(size_t count) @trusted if (__traits(isScalar, T)) {
-        T[] buffer = nu_resize(buffer, count, 1);
+        T[] buffer;
+        buffer = nu_resize(buffer, count, 1);
         ubyte[] bufferView = (cast(ubyte*)buffer.ptr)[0..count*T.sizeof];
 
         ptrdiff_t read = stream.read(bufferView);
-        return nu_etoh!(T, endian)(nu_resize(buffer, read <= 0 ? 0 : read, 1));
+        return nu_etoh!(T, endian)(nu_resize(buffer, read <= 0 ? 0 : read, 1)[]);
     }
 
 public:
 @safe:
-    this(Stream stream) {
+    this(Stream stream) @trusted {
         enforce(stream.canRead(), nogc_new!StreamUnsupportedException(stream));
         this.stream = stream;
     }
@@ -153,10 +154,10 @@ public:
         Returns:
             The UTF8 string read from the stream.
     */
-    nstring readUTF8(uint length) {
+    nstring readUTF8(uint length) @trusted {
         nstring str = nstring(length);
 
-        ptrdiff_t read = stream.read(str.ptr);
+        ptrdiff_t read = stream.read(cast(ubyte[])str.value);
         if (read <= 0) {
             str.resize(0);
             return str;
@@ -178,7 +179,7 @@ public:
         Returns:
             The UTF16 string read from the stream.
     */
-    nwstring readUTF16(uint length) {
+    nwstring readUTF16(uint length) @trusted {
         wchar[] buffer = this.readEndianSeq!(wchar, NATIVE_ENDIAN)(length);
         codepoint bom = getBOM(buffer);
 
@@ -204,7 +205,7 @@ public:
         Returns:
             The UTF16 string read from the stream.
     */
-    nwstring readUTF16LE(uint length) {
+    nwstring readUTF16LE(uint length) @trusted {
         wchar[] buffer = this.readEndianSeq!(wchar, Endianess.littleEndian)(length);
         nwstring out_ = nwstring(buffer);
         buffer = nu_resize(buffer, 0, 1);
@@ -220,7 +221,7 @@ public:
         Returns:
             The UTF16 string read from the stream.
     */
-    nwstring readUTF16BE(uint length) {
+    nwstring readUTF16BE(uint length) @trusted {
         wchar[] buffer = this.readEndianSeq!(wchar, Endianess.bigEndian)(length);
         nwstring out_ = nwstring(buffer);
         buffer = nu_resize(buffer, 0, 1);
@@ -239,7 +240,7 @@ public:
         Returns:
             The UTF32 string read from the stream.
     */
-    ndstring readUTF32(uint length) {
+    ndstring readUTF32(uint length) @trusted {
         dchar[] buffer = this.readEndianSeq!(dchar, NATIVE_ENDIAN)(length);
         codepoint bom = getBOM(buffer);
 
@@ -265,7 +266,7 @@ public:
         Returns:
             The UTF32 string read from the stream.
     */
-    ndstring readUTF32LE(uint length) {
+    ndstring readUTF32LE(uint length) @trusted {
         dchar[] buffer = this.readEndianSeq!(dchar, Endianess.littleEndian)(length);
         ndstring out_ = ndstring(buffer);
         buffer = nu_resize(buffer, 0, 1);
@@ -281,7 +282,7 @@ public:
         Returns:
             The UTF32 string read from the stream.
     */
-    ndstring readUTF32BE(uint length) {
+    ndstring readUTF32BE(uint length) @trusted {
         dchar[] buffer = this.readEndianSeq!(dchar, Endianess.bigEndian)(length);
         ndstring out_ = ndstring(buffer);
         buffer = nu_resize(buffer, 0, 1);
@@ -300,7 +301,9 @@ private:
     Stream stream;
 
 public:
-    this(Stream stream) {
+@safe:
+
+    this(Stream stream) @trusted{
         enforce(stream.canWrite(), nogc_new!StreamUnsupportedException(stream));
         this.stream = stream;
     }

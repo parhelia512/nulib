@@ -11,6 +11,8 @@
 module nulib.io.stream;
 import numem;
 
+public import nulib.io.stream.memstream;
+
 /**
     The origin of a seek operation
 */

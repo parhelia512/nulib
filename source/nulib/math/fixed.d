@@ -4,7 +4,7 @@ import numem.casting;
 /**
     Gets whether the provided value is a instance of $(D Fixed)
 */
-enum isFixed(T) = is(T : Fixed!U, U);
+enum isFixed(T) = is(T : Fixed!U, U...);
 
 /**
     Fixed-point math type with an even split between
@@ -16,21 +16,10 @@ enum isFixed(T) = is(T : Fixed!U, U);
         approximate equals operation is recommended for comparing
         fixed point math with 
 */
-struct Fixed(T) if (__traits(isIntegral, T) && !__traits(isUnsigned, T)) {
-private:
+struct Fixed(T, size_t FRACT_BITS = (8*(T.sizeof/2))) if (__traits(isIntegral, T) && !__traits(isUnsigned, T)) {
+public:
 @nogc nothrow:
     T data;
-
-    // Helper to create a raw instance of Fixed!T
-    pragma(inline, true)
-    static Fixed!T createRaw(T data) {
-        Fixed!T r;
-        r.data = data;
-        return r;
-    }
-
-    enum size_t HALF_BYTES = (T.sizeof/2);
-public:
 
     /**
         Half-sized max value as a float/double/real
@@ -40,7 +29,7 @@ public:
     /**
         How much to shift the data store in-operation.
     */
-    enum T SHIFT = HALF_BYTES*8;
+    enum T SHIFT = FRACT_BITS;
     
     /**
         Mask of fractional part
@@ -55,39 +44,48 @@ public:
     /**
         Max value of the fixed-precision value
     */
-    enum T max = T.max;
+    enum typeof(this) min = fromData(data: T.min);
 
     /**
         Max value of the fixed-precision value
     */
-    enum T min = T.min;
+    enum typeof(this) max = fromData(data: T.max);
+
+    /**
+        Creates a new instance from raw data.
+    */
+    static auto fromData(T data) {
+        typeof(this) t;
+        t.data = data;
+        return t;
+    }
 
     /**
         Constructor
     */
-    this(Y)(Y data) if(__traits(isScalar, T)) {
+    this(Y)(Y other) {
         static if (__traits(isIntegral, Y)) {
-            this.data = cast(T)(data << SHIFT);
+            this.data = cast(T)(other << SHIFT);
         } else static if (__traits(isFloating, Y)) {
-            this.data = cast(T)(data * HALF_MAX!Y);
+            this.data = cast(T)(other * HALF_MAX!Y);
         } else static if(is(Y : typeof(this))) {
 
             // Fast path for when you're just assigning between
             // the same type.
-            this.data = data.data;  
+            this.data = other.data;  
         } else static if (isFixed!Y) {
 
             // Shift integer part over so that we can realign it,
             // then add in the factional part from the other; making sure we cut out
             // any fractional part that doesn't fit within our own fractional space.
-            T intPart = cast(T)(((data.data & data.INT_MASK) >> data.SHIFT) << SHIFT);
-            T fractPart = cast(T)(data.data & data.FRACT_MASK);
+            T intPart = cast(T)(((other.data & other.INT_MASK) >> other.SHIFT) << SHIFT);
+            T fractPart = cast(T)(other.data & other.FRACT_MASK);
 
             // This step aligns the fractional part with the size of the container.
-            static if (data.SHIFT > SHIFT)
-                fractPart = (fractPart >> (data.SHIFT-SHIFT));
+            static if (other.SHIFT > SHIFT)
+                fractPart = (fractPart >> (other.SHIFT-SHIFT));
             else 
-                fractPart = (fractPart << (SHIFT-data.SHIFT));
+                fractPart = (fractPart << (SHIFT-other.SHIFT));
             
             this.data = (intPart & INT_MASK) | (fractPart & FRACT_MASK);
         } else static assert(0, "Unsupported construction");
@@ -105,12 +103,12 @@ public:
     pragma(inline, true)
     auto opBinary(string op, R)(const R rhs) const
     if (is(R : Fixed!T)) {
-        static if (op == "+") return Fixed!T.createRaw(cast(T)(data + rhs.data));
-        else static if (op == "-") return Fixed!T.createRaw(cast(T)(data - rhs.data));
+        static if (op == "+") return Fixed!T.fromData(cast(T)(data + rhs.data));
+        else static if (op == "-") return Fixed!T.fromData(cast(T)(data - rhs.data));
         else static if (op == "*" && T.sizeof <= 4) {
-            return Fixed!T.createRaw(cast(T)((cast(long)data * cast(long)rhs.data) >>> SHIFT));
+            return Fixed!T.fromData(cast(T)((cast(long)data * cast(long)rhs.data) >>> SHIFT));
         } else static if (op == "/" && T.sizeof <= 4) {
-            return Fixed!T.createRaw(cast(T)((cast(long)data << SHIFT) / rhs.data));
+            return Fixed!T.fromData(cast(T)((cast(long)data << SHIFT) / rhs.data));
         } else static assert(0, "Operation not supported (yet)");
     }
 
@@ -146,6 +144,11 @@ public:
         return this;
     }
 }
+
+/**
+    Q2.14 fixed-point number
+*/
+alias fixed2_14 = Fixed!(short, 14);
 
 /**
     Q8.8 fixed-point number
@@ -222,4 +225,10 @@ unittest {
 unittest {
     assert(fixed16(fixed32(32)) == 32);
     assert(fixed16(fixed32(32.5)) == 32.5);
+}
+
+@("fixed16: ctor fixed2_14")
+unittest {
+    assert(fixed16(fixed2_14(1.0)) == 1.0);
+    assert(fixed16(fixed2_14(0.5)) == 0.5);
 }

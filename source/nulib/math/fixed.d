@@ -147,7 +147,7 @@ public:
     pragma(inline, true)
     auto opAssign(R)(const R rhs)
     if (__traits(isScalar, R)) {
-        this(rhs);
+        this = typeof(this)(rhs);
         return this;
     }
 }

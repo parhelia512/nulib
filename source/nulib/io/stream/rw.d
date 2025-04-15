@@ -23,14 +23,14 @@ final
 class StreamReader : NuObject {
 @nogc:
 private:
-    Stream stream;
+    Stream stream_;
 
     // Reads a sequence of bytes and ensures their endianness is correct.
     // Additionally does a type-cast
     pragma(inline, true)
     T readEndian(T, Endianess endian)() @trusted if (__traits(isScalar, T)) {
         ubyte[T.sizeof] data;
-        ptrdiff_t l = stream.read(data);
+        ptrdiff_t l = stream_.read(data);
         
         if (l <= 0)
             return T.init;
@@ -45,15 +45,24 @@ private:
         buffer = nu_resize(buffer, count, 1);
         ubyte[] bufferView = (cast(ubyte*)buffer.ptr)[0..count*T.sizeof];
 
-        ptrdiff_t read = stream.read(bufferView);
+        ptrdiff_t read = stream_.read(bufferView);
         return nu_etoh!(T, endian)(nu_resize(buffer, read <= 0 ? 0 : read, 1)[]);
     }
 
 public:
 @safe:
+    
+    /**
+        The stream this reader is reading from
+    */
+    @property Stream stream() { return stream_; }
+
+    /**
+        Constructs a new stream reader
+    */
     this(Stream stream) @trusted {
         enforce(stream.canRead(), nogc_new!StreamUnsupportedException(stream));
-        this.stream = stream;
+        this.stream_ = stream;
     }
 
     /**
@@ -298,13 +307,21 @@ final
 class StreamWriter : NuObject {
 @nogc:
 private:
-    Stream stream;
+    Stream stream_;
 
 public:
 @safe:
 
+    /**
+        The stream this writer is writing to
+    */
+    @property Stream stream() { return stream_; }
+
+    /**
+        Constructs a new stream writer
+    */
     this(Stream stream) @trusted{
         enforce(stream.canWrite(), nogc_new!StreamUnsupportedException(stream));
-        this.stream = stream;
+        this.stream_ = stream;
     }
 }

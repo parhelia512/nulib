@@ -250,6 +250,8 @@ public:
         Constructor.
     */
     this(Stream stream, string file = __FILE__, size_t line = __LINE__) {
+        this.stream = stream;
+
         super("The requested operation is not supported by the stream!", null, file, line);
     }
 }
@@ -283,6 +285,8 @@ public:
         Constructor.
     */
     this(Stream stream, string reason, string file = __FILE__, size_t line = __LINE__) {
+        this.stream = stream;
+
         super(reason, null, file, line);
     }
 }
@@ -316,6 +320,8 @@ public:
         Constructor.
     */
     this(Stream stream, string reason, string file = __FILE__, size_t line = __LINE__) {
+        this.stream = stream;
+        
         super(reason, null, file, line);
     }
 }

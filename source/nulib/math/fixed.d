@@ -7,8 +7,8 @@ import numem.casting;
 enum isFixed(T) = is(T : Fixed!U, U...);
 
 /**
-    Fixed-point math type with an even split between
-    integer and fractional parts.
+    Fixed-point math type, fractional bits can be specified, but
+    by default is split evenly; eg Fixed!int will be Q16.16
 
     Note:
         When converting a fixed-precision number to a floating point

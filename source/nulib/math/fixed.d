@@ -55,7 +55,7 @@ public:
     /**
         Max value of the fixed-precision value
     */
-    enum T max = T.max >>> 1;
+    enum T max = T.max;
 
     /**
         Max value of the fixed-precision value

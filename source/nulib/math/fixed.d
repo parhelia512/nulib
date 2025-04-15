@@ -143,6 +143,13 @@ public:
         this = this.opBinary!(op, Fixed!T)(Fixed!T(rhs));
         return this;
     }
+
+    pragma(inline, true)
+    auto opAssign(R)(const R rhs)
+    if (__traits(isScalar, R)) {
+        this(rhs);
+        return this;
+    }
 }
 
 /**

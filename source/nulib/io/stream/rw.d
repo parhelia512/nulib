@@ -45,13 +45,13 @@ private:
         buffer = nu_resize(buffer, count, 1);
         ubyte[] bufferView = (cast(ubyte*)buffer.ptr)[0..count*T.sizeof];
 
-        ptrdiff_t read = stream_.read(bufferView);
+        ptrdiff_t read = stream_.read(bufferView)/T.sizeof;
         return nu_etoh!(T, endian)(nu_resize(buffer, read <= 0 ? 0 : read, 1)[]);
     }
 
 public:
 @safe:
-    
+
     /**
         The stream this reader is reading from
     */

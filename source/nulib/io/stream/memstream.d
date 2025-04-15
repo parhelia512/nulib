@@ -179,21 +179,21 @@ public:
         final switch(origin) {
             case SeekOrigin.start:
                 ptrdiff_t newpos = cast(ptrdiff_t)offset;
-                if (newpos >= buffer.length || newpos <= 0)
+                if (newpos > buffer.length || newpos < 0)
                     return STREAM_ERROR_OUT_OF_RANGE;
                 
                 rptr = newpos;
                 return cast(long)rptr;
             case SeekOrigin.relative:
                 ptrdiff_t newpos = cast(ptrdiff_t)rptr+offset;
-                if (newpos >= buffer.length || newpos <= 0)
+                if (newpos > buffer.length || newpos < 0)
                     return STREAM_ERROR_OUT_OF_RANGE;
                     
                 rptr = newpos;
                 return cast(long)rptr;
             case SeekOrigin.end:
                 ptrdiff_t newpos = cast(ptrdiff_t)buffer.length-offset;
-                if (newpos >= buffer.length || newpos <= 0)
+                if (newpos > buffer.length || newpos < 0)
                     return STREAM_ERROR_OUT_OF_RANGE;
 
                 rptr = newpos;

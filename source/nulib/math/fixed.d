@@ -1,5 +1,6 @@
 module nulib.math.fixed;
 import numem.casting;
+import numem.core.traits;
 
 /**
     Gets whether the provided value is a instance of $(D Fixed)
@@ -22,9 +23,9 @@ public:
     T data;
 
     /**
-        Half-sized max value as a float/double/real
+        Division factor for the given precision of float.
     */
-    enum HALF_MAX(Y) = cast(Y)(1LU << SHIFT);
+    enum DIV_FACT(Y) = cast(Y)(1LU << SHIFT);
     
     /**
         How much to shift the data store in-operation.
@@ -65,15 +66,18 @@ public:
     */
     this(Y)(Y other) {
         static if (__traits(isIntegral, Y)) {
-            this.data = cast(T)(other << SHIFT);
+            this.data = cast(T)(cast(T)other << SHIFT);
         } else static if (__traits(isFloating, Y)) {
-            this.data = cast(T)(other * HALF_MAX!Y);
-        } else static if(is(Y : typeof(this))) {
+            this.data = cast(T)(cast(Y)other * DIV_FACT!Y);
+        } else static if (isFixed!Y) {
 
             // Fast path for when you're just assigning between
             // the same type.
-            this.data = other.data;  
-        } else static if (isFixed!Y) {
+            static if (other.SHIFT == this.SHIFT) {
+                this.data = cast(T)other.data;
+                return;
+            }
+
 
             // Shift integer part over so that we can realign it,
             // then add in the factional part from the other; making sure we cut out
@@ -94,22 +98,10 @@ public:
     pragma(inline, true)
     Y opCast(Y)() const {
         static if (__traits(isIntegral, Y)) {
-            return data >> SHIFT;
+            return cast(Y)(data >> SHIFT);
         } else static if (__traits(isFloating, Y)) {
-            return cast(Y)data * (cast(Y)1.0 / HALF_MAX!Y);
+            return cast(Y)data * (cast(Y)1.0 / DIV_FACT!Y);
         } else static assert(0, "Unsupported cast.");
-    }
-
-    pragma(inline, true)
-    auto opBinary(string op, R)(const R rhs) const
-    if (is(R : Fixed!T)) {
-        static if (op == "+") return Fixed!T.fromData(cast(T)(data + rhs.data));
-        else static if (op == "-") return Fixed!T.fromData(cast(T)(data - rhs.data));
-        else static if (op == "*") {
-            return Fixed!T.fromData(cast(T)((cast(long)data * cast(long)rhs.data) >>> SHIFT));
-        } else static if (op == "/") {
-            return Fixed!T.fromData(cast(T)((cast(long)data << SHIFT) / rhs.data));
-        } else static assert(0, "Operation not supported (yet)");
     }
 
     pragma(inline, true)
@@ -122,37 +114,82 @@ public:
     if (is(R : Fixed!T)) {
         return this.data == other.data;
     }
-    
-    pragma(inline, true)
-    auto opOpAssign(string op, R)(const R rhs)
-    if (is(R : const Fixed!T)) {
-        this = this.opBinary!(op, R)(rhs);
-        return this;
-    }
-
-    pragma(inline, true)
-    auto opBinary(string op, R)(const R rhs) const
-    if (__traits(isScalar, R)) {
-        return this.opBinary!(op, Fixed!T)(Fixed!T(rhs));
-    }
 
     pragma(inline, true)
     bool opEquals(R)(const R other) const
     if (__traits(isScalar, R)) {
         return this.data == Fixed!T(other).data;
     }
+
+    pragma(inline, true)
+    typeof(this) opBinary(string op, R)(const R rhs) const
+    if (isFixed!R) {
+
+        // Convert mismatched Fixed!T
+        static if (R.SHIFT != SHIFT) {
+            auto other = typeof(this)(rhs);
+        } else static if (!is(typeof(R.data) == T)) {
+            auto other = typeof(this).fromData(cast(T)rhs.data);
+        } else {
+            auto other = rhs;
+        }
+
+        // Move out to LONG
+        long x = cast(long)data;
+        long y = cast(long)other.data;
+        long result;
+
+        static if (op == "+") {
+
+            result = x + y;
+        } else static if (op == "-") {
+
+            result = x - y;
+        } else static if (op == "*") {
+            
+            result = (x * y) >>> SHIFT;
+        } else static if (op == "/") {
+            static if (T.sizeof < 8 && R.sizeof < 8) {
+
+                // NOTE:    For 32-bit and below division, 64 bit provides
+                //          plenty of space to do the operation.
+                result = (x << SHIFT) / y;
+            } else {
+
+                // NOTE:    Division generally takes up more space as such,
+                //          this is the best way to get a mostly correct
+                //          result for 64-bit fixed point numbers.
+                result = ((x / y) << SHIFT) + ((x % y) << SHIFT) / y;
+            }
+        } else static assert(0, "Operation not supported (yet)");
+
+        return typeof(this).fromData(cast(T)result);
+    }
+
+    pragma(inline, true)
+    typeof(this) opBinary(string op, R)(const R rhs) const
+    if (__traits(isScalar, R)) {
+        return this.opBinary!(op, Fixed!T)(Fixed!T(rhs));
+    }
     
     pragma(inline, true)
-    auto opOpAssign(string op, R)(const R rhs)
+    typeof(this) opOpAssign(string op, R)(const R rhs)
+    if (is(R : const Fixed!T)) {
+        this = this.opBinary!(op, R)(rhs);
+        return this;
+    }
+    
+    pragma(inline, true)
+    typeof(this) opOpAssign(string op, R)(const R rhs)
     if (__traits(isScalar, R)) {
-        this = this.opBinary!(op, Fixed!T)(Fixed!T(rhs));
+        this = typeof(this)(this.opBinary!(op, Fixed!T)(Fixed!T(rhs)));
         return this;
     }
 
     pragma(inline, true)
-    auto opAssign(R)(const R rhs)
-    if (__traits(isScalar, R)) {
-        this = typeof(this)(rhs);
+    typeof(this) opAssign(R)(const R rhs)
+    if (!is(Unqual!R == Unqual!(typeof(this)))) {
+        this.__ctor!R(rhs);
         return this;
     }
 }

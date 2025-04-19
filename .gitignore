@@ -1,7 +1,6 @@
 .dub
 docs.json
 __dummy.html
-__dummy_docs/
 docs/
 /nulib
 nu*.dll
@@ -17,6 +16,7 @@ nu*-test-*
 *.lst
 
 dub.selections.json
+__dummy_docs/
 out/
 
 # Windows metadata

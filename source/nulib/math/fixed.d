@@ -105,9 +105,9 @@ public:
     if (is(R : Fixed!T)) {
         static if (op == "+") return Fixed!T.fromData(cast(T)(data + rhs.data));
         else static if (op == "-") return Fixed!T.fromData(cast(T)(data - rhs.data));
-        else static if (op == "*" && T.sizeof <= 4) {
+        else static if (op == "*") {
             return Fixed!T.fromData(cast(T)((cast(long)data * cast(long)rhs.data) >>> SHIFT));
-        } else static if (op == "/" && T.sizeof <= 4) {
+        } else static if (op == "/") {
             return Fixed!T.fromData(cast(T)((cast(long)data << SHIFT) / rhs.data));
         } else static assert(0, "Operation not supported (yet)");
     }
@@ -153,19 +153,34 @@ public:
 }
 
 /**
-    Q2.14 fixed-point number
+    Q2.14 fixed-point number (16-bit)
 */
 alias fixed2_14 = Fixed!(short, 14);
 
 /**
-    Q8.8 fixed-point number
+    Q26.6 fixed-point number (64-bit)
+*/
+alias fixed26_6 = Fixed!(long, 6);
+
+/**
+    Q2.6 fixed-point number (8-bit)
+*/
+alias fixed2_6 = Fixed!(byte, 6);
+
+/**
+    Q8.8 fixed-point number (16-bit)
 */
 alias fixed16 = Fixed!short;
 
 /**
-    Q16.16 fixed-point number
+    Q16.16 fixed-point number (32-bit)
 */
 alias fixed32 = Fixed!int;
+
+/**
+    Q32.32 fixed-point number (64-bit)
+*/
+alias fixed64 = Fixed!long;
 
 @("fixed32: int->fixed32")
 unittest {

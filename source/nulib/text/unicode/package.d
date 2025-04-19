@@ -138,7 +138,7 @@ auto ref toUTF16(FromT)(auto ref FromT from, bool addBOM = false) if (isSomeSafe
     This will always create a copy.
 */
 auto ref toUTF32(FromT)(auto ref FromT from, bool addBOM = false) if (isSomeSafeString!FromT) {
-    static if (StringCharSize!FromT == 2)
+    static if (StringCharSize!FromT == 4)
         return ndstring(from);
     else
         return encode!ndstring(decode(from, true), addBOM);

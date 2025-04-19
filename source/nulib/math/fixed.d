@@ -113,6 +113,11 @@ public:
     }
 
     pragma(inline, true)
+    size_t toHash() const @safe pure nothrow {
+        return this.data;
+    }
+
+    pragma(inline, true)
     bool opEquals(R)(const R other) const
     if (is(R : Fixed!T)) {
         return this.data == other.data;

@@ -158,6 +158,15 @@ public:
     ulong readU64BE() { return readEndian!(ulong, Endianess.bigEndian)(); } /// ditto
 
     /**
+        Reads a value from the stream.
+        
+        Returns:
+            The read value.
+    */
+    T readLE(T)() { return readEndian!(T, Endianess.littleEndian)(); }
+    T readBE(T)() { return readEndian!(T, Endianess.bigEndian)(); }
+
+    /**
         Reads a UTF8 string from the stream.
         
         Returns:

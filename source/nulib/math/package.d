@@ -136,7 +136,6 @@ bool isInfinity(T)(T x) @safe @nogc nothrow pure if (__traits(isFloating, T)) {
 
 /**
     Gets whether the value's sign bit is set.
-
 */
 bool signbit(T)(T x) @trusted @nogc nothrow pure {
     static if (__traits(isFloating, T)) {

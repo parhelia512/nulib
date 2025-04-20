@@ -21,11 +21,6 @@ struct Fixed(T, size_t FRACT_BITS = (8*(T.sizeof/2))) if (__traits(isIntegral, T
 public:
 @nogc nothrow:
     T data;
-
-    /**
-        Division factor for the given precision of float.
-    */
-    enum DIV_FACT(Y) = cast(Y)(1LU << SHIFT);
     
     /**
         How much to shift the data store in-operation.
@@ -36,6 +31,11 @@ public:
         Mask of fractional part
     */
     enum T FRACT_MASK = (cast(T)1LU << SHIFT) - 1;
+
+    /**
+        Division factor for the given precision of float.
+    */
+    enum FRACT_DIV(Y) = cast(Y)(1LU << SHIFT);
     
     /**
         Mask of integer part
@@ -68,7 +68,7 @@ public:
         static if (__traits(isIntegral, Y)) {
             this.data = cast(T)(cast(T)other << SHIFT);
         } else static if (__traits(isFloating, Y)) {
-            this.data = cast(T)(cast(Y)other * DIV_FACT!Y);
+            this.data = cast(T)(other * FRACT_DIV!Y);
         } else static if (isFixed!Y) {
 
             // Fast path for when you're just assigning between
@@ -155,11 +155,25 @@ public:
                 //          plenty of space to do the operation.
                 result = (x << SHIFT) / y;
             } else {
+                ulong signBit = 1LU << 63;
+                ulong rem = x & ~signBit;
+                ulong div = y & ~signBit;
+
+                ulong quo = 0;
+                int shift = SHIFT;
+                while(rem && shift > 0) {
+                    ulong d = rem / div;
+                    rem %= div;
+                    quo += d << shift;
+                    
+                    rem <<= 1;
+                    --shift;
+                }
 
                 // NOTE:    Division generally takes up more space as such,
                 //          this is the best way to get a mostly correct
                 //          result for 64-bit fixed point numbers.
-                result = ((x / y) << SHIFT) + ((x % y) << SHIFT) / y;
+                result = (quo >> 1) | ((x & signBit) ^ (y & signBit));
             }
         } else static assert(0, "Operation not supported (yet)");
 
@@ -174,7 +188,7 @@ public:
     
     pragma(inline, true)
     typeof(this) opOpAssign(string op, R)(const R rhs)
-    if (is(R : const Fixed!T)) {
+    if (isFixed!R) {
         this = this.opBinary!(op, R)(rhs);
         return this;
     }

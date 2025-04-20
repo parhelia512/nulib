@@ -147,7 +147,7 @@ public:
             result = x - y;
         } else static if (op == "*") {
             
-            result = (x * y) >>> SHIFT;
+            result = (x * y) >> SHIFT;
         } else static if (op == "/") {
             static if (T.sizeof < 8 && R.sizeof < 8) {
 

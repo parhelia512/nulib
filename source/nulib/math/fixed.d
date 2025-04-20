@@ -100,7 +100,7 @@ public:
         static if (__traits(isIntegral, Y)) {
             return cast(Y)(data >> SHIFT);
         } else static if (__traits(isFloating, Y)) {
-            return cast(Y)data * (cast(Y)1.0 / DIV_FACT!Y);
+            return (cast(Y)data / FRACT_DIV!Y);
         } else static assert(0, "Unsupported cast.");
     }
 

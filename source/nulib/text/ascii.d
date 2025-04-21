@@ -33,14 +33,14 @@ bool isHex(char c) {
     Gets whether the given character is uppercase.
 */
 bool isUpper(char c) {
-    return (c >= 'A' && c <= 'F') ;
+    return (c >= 'A' && c <= 'Z');
 }
 
 /**
     Gets whether the given character is lowercase.
 */
 bool isLower(char c) {
-    return (c >= 'a' && c <= 'f');
+    return (c >= 'a' && c <= 'z');
 }
 
 /**

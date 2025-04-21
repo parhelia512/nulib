@@ -21,6 +21,38 @@ enum UUIDVariant {
 */
 enum UUIDStringLength = 36;
 
+template CTUUID(string uuid) {
+    UUID genUUID(string slice) {
+        import std.conv : to;
+
+        UUID uuid;
+        if (__ctfe) {
+            if (!UUID.validate(slice))
+                return uuid;
+
+            uuid.time_low = slice[0..8].to!uint(16);
+            slice = slice[9..$];
+
+            uuid.time_mid = slice[0..4].to!ushort(16);
+            slice = slice[5..$];
+
+            uuid.time_hi_and_version = slice[0..4].to!ushort(16);
+            slice = slice[5..$];
+
+            uuid.clk_seq = slice[0..4].to!ushort(16);
+            slice = slice[5..$];
+
+            static foreach(i; 0..6) {
+                uuid.node[i] = slice[0..2].to!ubyte(16);
+                slice = slice[2..$];
+            }
+        }
+        return uuid;
+    }
+
+    enum CTUUID = genUUID(uuid);
+}
+
 /**
     RFC4122 compliant UUIDs
 */
@@ -160,7 +192,7 @@ public:
             return UUID.nil;
 
         UUID uuid;
-        
+
         // Get from string
         uuid.time_low = slice[0..8].toInt!uint(16);
         slice = slice[9..$];
@@ -179,7 +211,6 @@ public:
             uuid.node[i] = slice[0..2].toInt!ubyte(16);
             slice = slice[2..$];
         }
-
         return uuid;
     }
 

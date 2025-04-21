@@ -13,9 +13,19 @@ import numem.core.traits : getUDAs, hasUDA;
 import nulib.uuid;
 
 /**
+    A Compile-Time Globally Unique Identifier.
+*/
+enum Guid(string guid) = CTUUID!(guid);
+
+/**
     A Globally Unique Identifier.
 */
-alias Guid = UUID;
+enum Guid(uint time_low, ushort time_mid, ushort time_hi_and_version, ubyte clk0, ubyte clk1, ubyte d0, ubyte d1, ubyte d2, ubyte d3, ubyte d4, ubyte d5) = 
+    UUID(time_low, time_mid, time_hi_and_version, clk0, clk1, d0, d1, d2, d3, d4, d5);
+
+alias GUID = UUID;
+alias IID = UUID;
+alias CLSID = UUID;
 
 /**
     Gets the $(D Guid) for the given type if possible.
@@ -28,9 +38,9 @@ template __uuidof(T, A...) {
     static if (A.length == 0)
         alias __uuidof = __uuidof!(T, __traits(getAttributes, T));
     else static if (A.length == 1) {
-        static assert (is(typeof(A[0]) == Guid), T.stringof~" lacks a GUID!");
+        static assert (is(typeof(A[0]) == UUID), T.stringof~" lacks a GUID!");
         enum __uuidof = A[0];
-    } else static if (is(typeof(A[0]) == Guid)) {
+    } else static if (is(typeof(A[0]) == UUID)) {
         enum __uuidof = A[0];
     } else {
         alias __uuidof = __uuidof!(T, A[1 .. $]);
@@ -42,14 +52,14 @@ template __uuidof(T, A...) {
 
     All COM classes must derive from this interface.
 */
-@Guid(0, 0, 0, 192, 0, 0, 0, 0, 0, 0, 70)
+@Guid!(0, 0, 0, 192, 0, 0, 0, 0, 0, 0, 70)
 interface IUnknown {
 extern(Windows) @nogc:
 public:
     /**
         Helper type for getting the GUID of IUnknown.
     */
-    extern(D) __gshared const Guid IID = __uuidof!IUnknown;
+    extern(D) __gshared const IID iid = __uuidof!IUnknown;
 
     /**
         Queries a COM object for a pointer to one of its interface.
@@ -70,7 +80,7 @@ public:
             $(D S_OK) if supported, $(D E_NOINTERFACE) otherwise.
             If ppvObject is $(D null), returns $(D E_POINTER). 
     */
-    HRESULT QueryInterface(const(Guid)* riid, void** pvObject);
+    HRESULT QueryInterface(const(IID)* riid, void** ppvObject);
     
     /**
         A helper function that infers an interface identifier.
@@ -125,7 +135,7 @@ extern(Windows) @nogc:
             $(D E_NOINTERFACE) if the $(D riid) interface isn't supported,
             or either of $(D E_INVALIDARG), $(D E_OUTOFMEMORY) and $(D E_UNEXPECTED).
     */
-    HRESULT CreateInterface(IUnknown outer, const(Guid)* riid, void** pvObject);
+    HRESULT CreateInterface(IUnknown outer, const(IID)* riid, void** ppvObject);
 
     /**
         Locks an object application open in memory. 

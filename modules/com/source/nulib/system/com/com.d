@@ -143,6 +143,9 @@ public:
         Params:
             progID =    ProgID of the class to instantiate in any encoding.
                         The encoding is automatically converted to the correct format.
+            target =    The target instance to create
+            context =   The class context
+            outer =     The outer class
     */
     extern(D)
     static HRESULT createInstance(T, I = IUnknown)(inout(T)[] progID, ref I target, ComClassContext context = ComClassContext.inProcess, IUnknown outer = null) 
@@ -176,14 +179,14 @@ public:
             $(D S_OK) if supported, $(D E_NOINTERFACE) otherwise.
             If ppvObject is $(D null), returns $(D E_POINTER). 
     */
-    HRESULT QueryInterface(const(Guid)* riid, void** pvObject) { // @suppress(dscanner.style.phobos_naming_convention)
-        if (*riid == IUnknown.IID) {
-            *pvObject = cast(void*)cast(IUnknown)this;
+    HRESULT QueryInterface(const(IID)* riid, void** ppvObject) { // @suppress(dscanner.style.phobos_naming_convention)
+        if (*riid == IUnknown.iid) {
+            *ppvObject = cast(void*)cast(IUnknown)this;
             AddRef();
             return S_OK;
         }
 
-        *pvObject = null;
+        *ppvObject = null;
         return E_NOINTERFACE;
     }
 

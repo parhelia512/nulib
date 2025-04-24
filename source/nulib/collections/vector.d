@@ -288,6 +288,11 @@ public:
     */
     void popBack() {
         if (!empty) {
+            if (memory.length == 1) {
+                this.clear();
+                return;
+            }
+
             this.deleteRange(memory[$-1..$]);
         }
     }

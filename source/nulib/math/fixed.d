@@ -214,9 +214,9 @@ public:
 alias fixed2_14 = Fixed!(short, 14);
 
 /**
-    Q26.6 fixed-point number (64-bit)
+    Q26.6 fixed-point number (32-bit)
 */
-alias fixed26_6 = Fixed!(long, 6);
+alias fixed26_6 = Fixed!(int, 6);
 
 /**
     Q2.6 fixed-point number (8-bit)

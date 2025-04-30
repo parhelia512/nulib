@@ -32,6 +32,16 @@ public:
     T data;
     
     /**
+        Shorthand for this type
+    */
+    alias Self = typeof(this);
+    
+    /**
+        Shorthand for the backing type
+    */
+    alias ValueT = T;
+    
+    /**
         How much to shift the data store in-operation.
     */
     enum T SHIFT = FRACT_BITS;
@@ -54,18 +64,18 @@ public:
     /**
         Max value of the fixed-precision value
     */
-    enum typeof(this) min = fromData(data: T.min);
+    enum Self min = Self.fromData(T.min);
 
     /**
         Max value of the fixed-precision value
     */
-    enum typeof(this) max = fromData(data: T.max);
+    enum Self max = Self.fromData(T.max);
 
     /**
         Creates a new instance from raw data.
     */
     static auto fromData(T data) {
-        typeof(this) t;
+        Self t;
         t.data = data;
         return t;
     }

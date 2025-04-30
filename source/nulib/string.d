@@ -187,32 +187,32 @@ public:
     /**
         The length of the string.
     */
-    @property size_t length() @safe nothrow => memory.length;
+    @property size_t length() @safe nothrow { return memory.length; }
 
     /**
         Gets the length of the string, with the null terminator.
     */
-    @property size_t realLength() @safe nothrow => memory.ptr ? memory.length+1 : 0;
+    @property size_t realLength() @safe nothrow { return memory.ptr ? memory.length+1 : 0; }
     
     /**
         The length of the string, in bytes.
     */
-    @property size_t usage() @safe nothrow => memory.length*T.sizeof;
+    @property size_t usage() @safe nothrow { return memory.length*T.sizeof; }
 
     /**
         Whether the string is empty.
     */
-    @property bool empty() @safe nothrow => memory.length == 0;
+    @property bool empty() @safe nothrow { return memory.length == 0; }
 
     /**
         Gets a C string pointer to the nstring.
     */
-    @property const(T)* ptr() @system nothrow => cast(const(T)*)memory.ptr;
+    @property const(T)* ptr() @system nothrow { return cast(const(T)*)memory.ptr; }
 
     /**
         Gets the internal memory slice.
     */
-    @property immutable(T)[] value() inout @trusted nothrow pure => memory;
+    @property immutable(T)[] value() inout @trusted nothrow pure { return memory; }
 
     // Aliases for legacy purposes.
     alias toDString = value;

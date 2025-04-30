@@ -137,47 +137,47 @@ public:
     /**
         Gets the internal memory slice.
     */
-    @property T[] value() @trusted nothrow pure => memory;
+    @property T[] value() @trusted nothrow pure { return memory; }
 
     /**
         The length of the vector
     */
-    @property size_t length() const @safe nothrow => memory.length;
+    @property size_t length() const @safe nothrow { return memory.length; }
 
     /**
         The capacity of the vector.
     */
-    @property size_t capacity() const @safe nothrow => memoryCapacity;
+    @property size_t capacity() const @safe nothrow { return memoryCapacity; }
 
     /**
         Whether the vector is empty.
     */
-    @property bool empty() const @safe nothrow => memory.length == 0;
+    @property bool empty() const @safe nothrow { return memory.length == 0; }
 
     /**
         The length of the vector, in bytes.
     */
-    @property size_t usage() @safe nothrow => memory.length*T.sizeof;
+    @property size_t usage() @safe nothrow { return memory.length*T.sizeof; }
 
     /**
         Gets a pointer to the first element of the
         vector.
     */
-    @property T* ptr() @system nothrow => memory.ptr;
+    @property T* ptr() @system nothrow { return memory.ptr; }
 
     /**
         Gets a pointer to the first element of the vector.
 
         If the vector is empty, the first element will be null.
     */
-    @property T* front() @system nothrow => empty ? null : &memory[0];
+    @property T* front() @system nothrow { return empty ? null : &memory[0]; }
 
     /**
         Gets a pointer to the last element of the vector.
 
         If the vector is empty, the last element will be null.
     */
-    @property T* back() @system nothrow => empty ? null : &memory[$-1];
+    @property T* back() @system nothrow { return empty ? null : &memory[$-1]; }
 
     ~this() {
 

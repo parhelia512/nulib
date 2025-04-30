@@ -23,7 +23,8 @@
         HALF = &frac12;
 */
 module nulib.math;
-public import core.math;
+public import nulib.math.intrinsics;
+public import nulib.math.floating;
 
 // Values obtained from Wolfram Alpha. 116 bits ought to be enough for anybody.
 // Wolfram Alpha LLC. 2011. Wolfram|Alpha. http://www.wolframalpha.com/input/?i=e+in+base+16 (access July 6, 2011).
@@ -43,19 +44,7 @@ enum real M_2_SQRTPI = 0x1.20dd750429b6d11ae3a914fed7fd8p+0L; /** 2 / $(SQRT)$(P
 enum real SQRT2 =      0x1.6a09e667f3bcc908b2fb1366ea958p+0L; /** $(SQRT)2 = 1.414213... */
 enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF) = 0.707106... */
 
-/**
-    Returns the larger of the 2 given scalar values.
-
-    Params:
-        rhs = value
-        lhs = value
-    
-    Returns:
-        The largest of the 2 given values.
-*/
-T max(T)(T lhs, T rhs) if (__traits(isScalar, T)) {
-    return lhs > rhs ? lhs : rhs;
-}
+@safe pure:
 
 /**
     Returns the smaller of the 2 given scalar values.
@@ -72,6 +61,20 @@ T min(T)(T lhs, T rhs) if (__traits(isScalar, T)) {
 }
 
 /**
+    Returns the larger of the 2 given scalar values.
+
+    Params:
+        rhs = value
+        lhs = value
+    
+    Returns:
+        The largest of the 2 given values.
+*/
+T max(T)(T lhs, T rhs) if (__traits(isScalar, T)) {
+    return lhs > rhs ? lhs : rhs;
+}
+
+/**
     Clamps scalar value into the given range.
 
     Params:
@@ -83,61 +86,22 @@ T min(T)(T lhs, T rhs) if (__traits(isScalar, T)) {
         $(D value) clamped between $(D min_) and $(D max_),
         equivalent of $(D min(max(value, min_), max_))
 */
-T clamp(T)(T value, T min_, T max_) if (__traits(isScalar, T))  {
+T clamp(T)(T value, T min_, T max_) if (__traits(isScalar, T)) {
     return min(max(value, min_), max_);
 }
 
-/**
-    Determines whether the given value is NaN (Not a Number)
-
-    Params:
-        x   = The value to check
-    
-    Returns:
-        $(D true) if $(D x) is NaN,
-        $(D false) otherwise.
-*/
-bool isNaN(T)(T x) @safe @nogc nothrow pure if (__traits(isFloating, T)) {
-    return x != x;
-}
-
-/**
-    Determines whether the given value is a finite number.
-
-    Params:
-        x   = The value to check
-    
-    Returns:
-        $(D true) if $(D x) is a finite, valid number,
-        $(D false) otherwise.
-*/
-bool isFinite(T)(T x) @safe @nogc nothrow pure if (__traits(isFloating, T)) {
-    return x == x && x != T.infinity && x != -T.infinity;
-}
-
-/**
-    Determines whether the given value is an infinite number.
-
-    Params:
-        x   = The value to check
-    
-    Returns:
-        $(D true) if $(D x) is an infinite floating point number,
-        $(D false) otherwise.
-*/
-bool isInfinity(T)(T x) @safe @nogc nothrow pure if (__traits(isFloating, T)) {
-    static if (is(T == float)) {
-        return ((*cast(uint *)&x) & 0x7FFF_FFFF) == 0x7F80_0000;
-    } else static if (is(T == double)) {
-        return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
-            == 0x7FF0_0000_0000_0000;
-    } else return (x < -T.max) || (T.max < x);
-}
 
 /**
     Gets whether the value's sign bit is set.
+
+    Params:
+        x = The value to check
+    
+    Returns:
+        $(D true) if the value is signed (positive),
+        $(D false) otherwise.
 */
-bool signbit(T)(T x) @trusted @nogc nothrow pure {
+bool signbit(T)(T x) @trusted @nogc nothrow pure if (__traits(isScalar, T)) {
     static if (__traits(isFloating, T)) {
 
         double tmp = cast(double)x;
@@ -149,288 +113,76 @@ bool signbit(T)(T x) @trusted @nogc nothrow pure {
 }
 
 /**
-    Gets the given value with the sign bit of another.
+    Copies the sign-bit from one value to another.
+
+    Params:
+        to =    The value to copy to
+        from =  The value to copy from
+    
+    Returns:
+        The value of $(D to) with the sign bit flipped
+        to match $(D from).
 */
-T copysign(T)(T to, T from) @safe @nogc nothrow pure {
+T copysign(T)(T to, T from) @safe @nogc nothrow pure if (__traits(isScalar, T)) {
     return signbit(to) == signbit(from) ? to : -to;
 }
 
-// NOTE:    Currently support for `real` arithmetic is not implemented for the
-//          non-IEEE `real` format. Only float and double are supported by these
-//          functions
-
 /**
-    Computes tangent of the given value.
+    Linearly interpolates between $(D a) and $(D b)
 
     Params:
-        x = The value
+        a = The first value to interpolate
+        b = The second value to interpolate
+        t = The interpolation step from 0..1
     
     Returns:
-        The tangent of $(D x).
+        The interpolated value between $(D a) and $(D b)
 */
-T tan(T)(T x) @safe @nogc nothrow pure {
-    version(LLVM) {
-        return cast(T)__llvm_tan(x);
-    } else {
-        static if (is(T == float) && T.mant_dig == 24) {
-            static immutable T[6] P = [
-                3.33331568548E-1,
-                1.33387994085E-1,
-                5.34112807005E-2,
-                2.44301354525E-2,
-                3.11992232697E-3,
-                9.38540185543E-3,
-            ];
-
-            enum T P1 = 0.78515625;
-            enum T P2 = 2.4187564849853515625E-4;
-            enum T P3 = 3.77489497744594108E-8;
-            
-        } else static if (is(T == double)) {
-            static immutable T[3] P = [
-            -1.7956525197648487798769E7L,
-                1.1535166483858741613983E6L,
-            -1.3093693918138377764608E4L,
-            ];
-            static immutable T[5] Q = [
-            -5.3869575592945462988123E7L,
-                2.5008380182335791583922E7L,
-            -1.3208923444021096744731E6L,
-                1.3681296347069295467845E4L,
-                1.0000000000000000000000E0L,
-            ];
-
-            enum T P1 = 7.853981554508209228515625E-1L;
-            enum T P2 = 7.946627356147928367136046290398E-9L;
-            enum T P3 = 3.061616997868382943065164830688E-17L;
-            
-        } else static assert(0, T.stringof~" is not supported currently!");
-
-        // Special cases.
-        if (x == cast(T) 0.0 || isNaN(x))
-            return x;
-        if (isInfinity(x))
-            return T.nan;
-
-        bool sign = signbit(x);
-        if (sign)
-            x = -1;
-    }
+T lerp(T)(T a, T b, float t) {
+    return a * (1 - t) + b * t;
 }
 
 /**
-    Computes arc-tangent of the given value.
+    Quadilaterally interpolates between $(D p0) and $(D p2),
+    with $(D p1) as a control point.
 
     Params:
-        x = The value
+        p0 = The first value to interpolate
+        p1 = The control value for the curve.
+        p2 = The second value to interpolate
+        t = The interpolation step from 0..1
     
     Returns:
-        The arc-tangent of $(D x).
+        The interpolated value between $(D p0) and $(D p2)
 */
-T atan(T)(T x) @safe @nogc nothrow pure {
-    version(LLVM) {
-        return cast(T)__llvm_atan(x);
-    } else {
-        static if (is(T == float) && T.mant_dig == 24) {
+T quad(T)(T p0, T p1, T p2, float t) {
+    float tm = 1.0 - t;
+    float a = tm * tm;
+    float b = 2.0 * tm * t;
+    float c = t * t;
 
-            static immutable T[4] P = [
-            -3.33329491539E-1,
-                1.99777106478E-1,
-            -1.38776856032E-1,
-                8.05374449538E-2,
-            ];
-        } else static if (is(T == double)) {
-
-            static immutable T[5] P = [
-            -6.485021904942025371773E1L,
-            -1.228866684490136173410E2L,
-            -7.500855792314704667340E1L,
-            -1.615753718733365076637E1L,
-            -8.750608600031904122785E-1L,
-            ];
-            static immutable T[6] Q = [
-                1.945506571482613964425E2L,
-                4.853903996359136964868E2L,
-                4.328810604912902668951E2L,
-                1.650270098316988542046E2L,
-                2.485846490142306297962E1L,
-                1.000000000000000000000E0L,
-            ];
-
-            enum T MOREBITS = 6.123233995736765886130E-17L;
-            
-        } else static assert(0, T.stringof~" is not supported currently!");
-
-        // tan(PI/8)
-        enum T TAN_PI_8 = 0.414213562373095048801688724209698078569672L;
-
-        // tan(3 * PI/8)
-        enum T TAN3_PI_8 = 2.414213562373095048801688724209698078569672L;
-
-        // Special cases.
-        if (x == cast(T) 0.0)
-            return x;
-        if (isInfinity(x))
-            return copysign(cast(T) PI_2, x);
-
-        // Make argument positive but save the sign.
-        bool sign = false;
-        if (signbit(x)) {
-            sign = true;
-            x = -x;
-        }
-
-        static if (is(T == float) && T.mant_dig == 24) {
-
-            // Range reduction.
-            T y;
-            if (x > TAN3_PI_8) {
-
-                y = PI_2;
-                x = -((cast(T) 1.0) / x);
-            } else if (x > TAN_PI_8) {
-                
-                y = PI_4;
-                x = (x - cast(T) 1.0)/(x + cast(T) 1.0);
-            } else y = 0.0;
-
-            // Rational form in x^^2.
-            const T z = x * x;
-            y += poly(z, P) * z * x + x;
-            
-        } else {
-            short flag = 0;
-            T y;
-            if (x > TAN3_PI_8) {
-                y = PI_2;
-                flag = 1;
-                x = -(1.0 / x);
-            } else if (x <= 0.66) {
-                y = 0.0;
-            } else {
-                y = PI_4;
-                flag = 2;
-                x = (x - 1.0)/(x + 1.0);
-            }
-
-            T z = x * x;
-            z = z * poly(z, P) / poly(z, Q);
-            z = x * z + x;
-
-            if (flag == 2)
-                z += 0.5 * MOREBITS;
-            else if (flag == 1)
-                z += MOREBITS;
-            
-            y = y + z;
-        }
-
-        return sign ? -y : y;
-    }
+    return a * p0 + b * p1 + c * p2;
 }
 
 /**
-    Computes arc-tangent of the given value, using signs to determine quadrant.
+    Interpolates between $(D p0) and $(D p3), using a cubic
+    spline with $(D p1) and $(D p2) as control points.
 
     Params:
-        y = value
-        x = value
+        p0 = The first value to interpolate
+        p1 = The first control value for the curve.
+        p2 = The second control value for the curve.
+        p3 = The second value to interpolate
+        t = The interpolation step from 0..1
     
     Returns:
-        The arc-tangent of $(D y / x).
+        The interpolated value between $(D p0) and $(D p3)
 */
-T atan2(T)(T y, T x) @safe pure nothrow @nogc {
-    version(LLVM) {
-        return cast(T)__llvm_atan2(x);
-    } else {
-
-        // Special cases.
-        if (isNaN(x) || isNaN(y))
-            return T.nan;
-        
-        if (y == cast(T) 0.0) {
-            if (x >= 0 && !signbit(x))
-                return copysign(0, y);
-            else
-                return copysign(cast(T) PI, y);
-        } if (x == cast(T) 0.0)
-            return copysign(cast(T) PI_2, y);
-        
-        if (isInfinity(x)) {
-            if (signbit(x)) {
-                if (isInfinity(y))
-                    return copysign(3 * cast(T) PI_4, y);
-                else
-                    return copysign(cast(T) PI, y);
-            } else {
-                if (isInfinity(y))
-                    return copysign(cast(T) PI_4, y);
-                else
-                    return copysign(cast(T) 0.0, y);
-            }
-        }
-
-        if (isInfinity(y))
-            return copysign(cast(T) PI_2, y);
-
-        // Call atan and determine the quadrant.
-        T z = atan(y / x);
-
-        if (signbit(x)) {
-            if (signbit(y))
-                z = z - cast(T) PI;
-            else
-                z = z + cast(T) PI;
-        }
-
-        if (z == cast(T) 0.0)
-            return copysign(z, y);
-
-        return z;
-    }
-}
-
-//
-//      Compiler Specific Intrinsics
-//
-
-version(LLVM) {
-private:
-    pragma(LDC_intrinsic, "llvm.tan.f32")
-    float __llvm_tan(float);
-
-    pragma(LDC_intrinsic, "llvm.tan.f64")
-    double __llvm_tan(double);
-
-    pragma(LDC_intrinsic, "llvm.atan.f32")
-    float __llvm_atan(float);
-
-    pragma(LDC_intrinsic, "llvm.atan.f64")
-    double __llvm_atan(double);
-
-    pragma(LDC_intrinsic, "llvm.atan2.f32")
-    float __llvm_atan2(float);
-
-    pragma(LDC_intrinsic, "llvm.atan2.f64")
-    double __llvm_atan2(double);
-
-} else version(GDC) {
-
-} else {
-
-}
-
-//
-//      Private Helpers
-//
-
-private:
-T poly(T)(T x, T[] y) @safe @nogc nothrow pure {
-    ptrdiff_t i = y.length - 1;
-    T r = y[i];
-    while (--i >= 0) {
-        r *= x;
-        r += y[i];
-    }
-    return r;
+T cubic(T)(T p0, T p1, T p2, T p3, float t) {
+    T a = -0.5 * p0 + 1.5 * p1 - 1.5 * p2 + 0.5 * p3;
+    T b = p0 - 2.5 * p1 + 2 * p2 - 0.5 * p3;
+    T c = -0.5 * p0 + 0.5 * p2;
+    T d = p1;
+    
+    return a * (t ^^ 3) + b * (t ^^ 2) + c * t + d;
 }

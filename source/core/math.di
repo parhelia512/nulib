@@ -45,13 +45,15 @@ public:
     alias rint = llvm_rint!double;
     alias rint = llvm_rint!real;
 
-    float  ldexp(float  n, int exp) { return ldexpImpl(n, exp); }
-    double ldexp(double n, int exp) { return ldexpImpl(n, exp); }
-    real ldexp(real n, int exp) { return ldexpImpl(n, exp); }
+    pragma(inline, true) {
+        float  ldexp(float  n, int exp) { return ldexpImpl(n, exp); }
+        double ldexp(double n, int exp) { return ldexpImpl(n, exp); }
+        real ldexp(real n, int exp) { return ldexpImpl(n, exp); }
+    }
 
     // Implementation from libmir:
     // https://github.com/libmir/mir-core/blob/master/source/mir/math/ieee.d
-    private T ldexpImpl(T)(const T n, int exp) @trusted pure nothrow
+    private T ldexpImpl(T)(const T n, int exp) @trusted @nogc pure nothrow
     {
         enum RealFormat { ieeeSingle, ieeeDouble, ieeeExtended, ieeeQuadruple }
 

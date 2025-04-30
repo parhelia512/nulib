@@ -1,3 +1,12 @@
+/**
+    Nulib Fixed Point Math
+
+    Copyright: Copyright © 2023-2025, Kitsunebi Games
+    Copyright: Copyright © 2023-2025, Inochi2D Project
+    License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    Authors:
+        Luna Nielsen
+*/
 module nulib.math.fixed;
 import numem.casting;
 import numem.core.traits;
@@ -309,4 +318,73 @@ unittest {
 unittest {
     assert(fixed16(fixed2_14(1.0)) == 1.0);
     assert(fixed16(fixed2_14(0.5)) == 0.5);
+}
+
+
+
+
+//
+//          MATH OPERATIONS.
+//
+
+
+/**
+    Computes the nearest integer value greater than the given value.
+
+    Params:
+        x = The value
+    
+    Returns:
+        The nearest integer value greater than $(D x).
+*/
+T ceil(T)(T x) if (isFixed!T) {
+    return T.fromData((x.data & T.INT_MASK) + (1 << T.SHIFT));
+}
+
+/**
+    Computes the nearest integer value lower than the given value.
+
+    Params:
+        x = The value
+    
+    Returns:
+        The nearest integer value lower than $(D x).
+*/
+T floor(T)(T x) if (isFixed!T) {
+    return T.fromData(x.data & T.INT_MASK);
+}
+
+/**
+    Computes the nearest integer value lower in magnitude than
+    the given value.
+
+    Params:
+        x = The value
+    
+    Returns:
+        The nearest integer value lower in magnitude than $(D x).
+*/
+T trunc(T)(T x) if (isFixed!T) {
+    return T.fromData(x.data & T.INT_MASK);
+}
+
+/**
+    Gets the fractional part of the value.
+
+    Params:
+        value = The value to get the fractional portion of
+
+    Returns:
+        The factional part of the given value.
+*/
+T fract(T)(T value) if (isFixed!T) {
+    return T.fromData(value.data & T.FRACT_MASK);
+}
+
+@("fixed32: rounding")
+unittest {
+    assert(fixed32(1.5).trunc() == fixed32(1.0));
+    assert(fixed32(1.5).floor() == fixed32(1.0));
+    assert(fixed32(1.5).ceil() == fixed32(2.0));
+    assert(fixed32(1.5).fract() == fixed32(0.5));
 }

@@ -470,7 +470,6 @@ extern double ceil(double x);
 /// ditto
 extern float ceilf(float x);
 
-
 /**
     Computes the nearest integer value lower than the given value.
 

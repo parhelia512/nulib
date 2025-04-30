@@ -20,7 +20,7 @@ jobs:
       matrix:
         os: [macOS-latest, ubuntu-latest, windows-latest]
         arch: [x86_64, arm64]
-        dc: [ldc-beta, dmd-master]
+        dc: [ldc-beta, dmd-master, ldc-1.30.0]
         exclude:
           - { dc: dmd-master, arch: arm64 }
 

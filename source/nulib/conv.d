@@ -32,7 +32,7 @@ T to_integral(T)(inout(char)[] str, int base = 10) @nogc nothrow if (__traits(is
 
     switch(base) {
         case 8:
-            sscanf(tmp.ptr, "%llo", &out_);
+            cast(void)sscanf(tmp.ptr, "%llo", &out_);
             return cast(T)out_;
 
         case 10:
@@ -42,7 +42,7 @@ T to_integral(T)(inout(char)[] str, int base = 10) @nogc nothrow if (__traits(is
                 return cast(T)atoll(tmp.ptr);
 
         case 16:
-            sscanf(tmp.ptr, "%llx", &out_);
+            cast(void)sscanf(tmp.ptr, "%llx", &out_);
             return cast(T)out_;
 
         default:
@@ -168,7 +168,7 @@ nstring to_string_impl(T...)(const(char)* fmtstring, T input) @nogc {
         size_t rlen = reqlen+1;
 
         char* tmp = cast(char*)nu_malloc(rlen);
-        snprintf(tmp, rlen, fmtstring, input);
+        cast(void)snprintf(tmp, rlen, fmtstring, input);
         
         nstring out_ = nstring(tmp[0..rlen]);
         nu_free(cast(void*)tmp);

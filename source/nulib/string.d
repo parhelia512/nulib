@@ -140,6 +140,7 @@ struct StringImpl(T) if (isSomeChar!T) {
 @nogc:
 private:
     alias SelfType = typeof(this);
+    alias MemoryT = immutable(T)[];
     
     // Backing slice of the string.
     immutable(T)[] memory = null;
@@ -277,9 +278,7 @@ public:
         The contents of the string will be zero-initialized.
     */
     this(uint size) {
-        if (__ctfe) {
-            this.memory.length = size;
-        } else {
+        if (__ctfe) { } else {
             this.resize(size);
             nogc_zeroinit(this.memory);
         }
@@ -296,8 +295,8 @@ public:
         Reverses the contents of the string
     */
     void reverse() {
-        import nulib.memory.endian : nu_flip_bytes;
-        nu_flip_bytes(memory);
+        import nulib.memory.endian : nu_etoh, ALT_ENDIAN;
+        cast(void)nu_etoh!(T, ALT_ENDIAN)(cast(T[])memory);
     }
 
     /**

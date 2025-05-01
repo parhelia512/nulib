@@ -242,10 +242,7 @@ public:
             reserved = How many elements of memory to reserve.
     */
     this(size_t reserved) {
-        if (__ctfe) {
-            this.memory.length = reserved;
-            this.memoryCapacity = reserved;
-        } else {
+        if (__ctfe) { } else {
             this.reserve(reserved);
         }
     }

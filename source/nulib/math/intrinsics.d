@@ -561,7 +561,7 @@ T ceil(T)(T value) if (__traits(isFloating, T)) {
 pragma(inline, true)
 T abs(T)(T value) if (__traits(isScalar, T)) {
     static if (__traits(isFloating, T)) {
-        return dmath.fabs(x);
+        return dmath.fabs(value);
     } else {
         return value < 0 ? -value : value;
     }

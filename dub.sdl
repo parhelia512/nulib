@@ -4,7 +4,7 @@ authors "Luna"
 copyright "Copyright © 2025, Luna"
 license "BSL-1.0"
 
-dependency "numem" version=">=1.0.5"
+dependency "numem" version=">=1.1.0"
 dependency "nulib:stdc" version="*"
 
 // Basic configuration

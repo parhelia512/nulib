@@ -15,8 +15,16 @@ module nulib.c.stdio;
 //  TODO:   Move this stuff into numem instead.
 version(LDC) { import ldc.intrinsics; }
 else enum LLVM_version = 9999; // Not LLVM, so doesn't matter.
-static if (LLVM_version < 1700) public import core.stdc.stdio;
-else:
+static if (LLVM_version < 1700) {
+    import drt = core.stdc.stdio;
+    alias FILE = drt.FILE;
+} else {
+    
+    /**
+        Opaque File Handle
+    */
+    struct FILE;
+}
 
 extern(C) nothrow @nogc:
 
@@ -44,11 +52,6 @@ enum {
     */
     EOF = -1
 }
-
-/**
-    Opaque File Handle
-*/
-struct FILE;
 
 /**
     Prints a formatted string.

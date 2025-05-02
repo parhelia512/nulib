@@ -1,18 +1,12 @@
 module nulib.system.com.com;
 import nulib.system.com.objbase;
+import nulib.system.com.uuid;
 import numem.core.atomic : nu_atomic_add_32, nu_atomic_sub_32;
 import numem;
 
-public import nulib.system.com.winerror;
+public import nulib.system.com.hresult;
 public import nulib.system.com.unk;
-import nulib.system.com.objbase :
-    CoInitialize,
-    CoInitializeEx,
-    CoUninitialize,
-    CoGetCurrentProcess,
-    CoFreeLibrary,
-    CoFreeUnusedLibraries,
-    CLSIDFromProgID;
+import nulib.system.com.objbase;
 
 /**
     Class Context for COM Object Instantiation.
@@ -179,14 +173,14 @@ public:
             $(D S_OK) if supported, $(D E_NOINTERFACE) otherwise.
             If ppvObject is $(D null), returns $(D E_POINTER). 
     */
-    HRESULT QueryInterface(const(IID)* riid, void** ppvObject) { // @suppress(dscanner.style.phobos_naming_convention)
+    HRESULT QueryInterface(const(IID)* riid, out void* ppvObject) { // @suppress(dscanner.style.phobos_naming_convention)
         if (*riid == IUnknown.iid) {
-            *ppvObject = cast(void*)cast(IUnknown)this;
+            ppvObject = cast(void*)cast(IUnknown)this;
             AddRef();
             return S_OK;
         }
 
-        *ppvObject = null;
+        ppvObject = null;
         return E_NOINTERFACE;
     }
 

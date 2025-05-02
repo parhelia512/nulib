@@ -9,8 +9,9 @@
 module nulib.com;
 
 public import nulib.system.com.com;
-public import nulib.system.com.winerror;
+public import nulib.system.com.hresult;
 public import nulib.system.com.unk;
+public import nulib.system.com.uuid;
 public import nulib.system.com.objbase :
     CoInitialize,
     CoInitializeEx,

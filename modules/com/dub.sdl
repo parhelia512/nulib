@@ -14,11 +14,13 @@ configuration "library" {
     targetType "sourceLibrary"
 }
 
-configuration "unittest" {
-    targetType "autodetect"
-    dependency "silly" version="~>1.1.1"
-}
-
 configuration "other_platforms" {
     targetType "none"
+}
+
+// For unit tests only.
+configuration "unittest" {
+    platforms "windows"
+    targetType "autodetect"
+    dependency "silly" version="~>1.1.1"
 }

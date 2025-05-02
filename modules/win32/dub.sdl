@@ -9,9 +9,7 @@ targetPath "out/"
 
 buildRequirements "silenceDeprecations"
 
-dependency "nulib" version="*"
 dependency "nulib:com" path="../../"
-dependency "numem" version="*"
 
 configuration "library" {
     platforms "windows"
@@ -27,6 +25,8 @@ configuration "unittest" {
     platforms "windows"
     targetType "autodetect"
     
+    dependency "nulib" version="*"
+    dependency "numem" version="*"
     dependency "numem:hookset-libc" version="*"
     dependency "silly" version="~>1.1.1"
 }

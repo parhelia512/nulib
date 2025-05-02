@@ -7,9 +7,18 @@
     Authors:   Luna Nielsen
 */
 module nulib.c.stdio;
-import core.attribute : weak;
 
-extern(C) nothrow @nogc @weak:
+//  NOTE:   This ugly hack is here to make sure LDC 1.30 is supported.
+//          Said version uses typed pointers which causes a compilation
+//          error on said release; in that case we import stdio from phobos.
+//
+//  TODO:   Move this stuff into numem instead.
+version(LDC) { import ldc.intrinsics; }
+else enum LLVM_version = 9999; // Not LLVM, so doesn't matter.
+static if (LLVM_version < 1700) public import core.stdc.stdio;
+else:
+
+extern(C) nothrow @nogc:
 
 enum {
     /**

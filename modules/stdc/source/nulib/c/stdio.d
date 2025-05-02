@@ -7,8 +7,9 @@
     Authors:   Luna Nielsen
 */
 module nulib.c.stdio;
+import core.attribute : weak;
 
-extern(C) nothrow @nogc:
+extern(C) nothrow @nogc @weak:
 
 enum {
     /**

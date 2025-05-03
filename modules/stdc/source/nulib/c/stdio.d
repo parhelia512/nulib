@@ -7,23 +7,19 @@
     Authors:   Luna Nielsen
 */
 module nulib.c.stdio;
+import numem.compiler;
 
-//  NOTE:   This ugly hack is here to make sure LDC 1.30 is supported.
-//          Said version uses typed pointers which causes a compilation
-//          error on said release; in that case we import stdio from phobos.
-//
-//  TODO:   Move this stuff into numem instead.
-version(LDC) { import ldc.intrinsics; }
-else enum LLVM_version = 9999; // Not LLVM, so doesn't matter.
-static if (LLVM_version < 1700) {
-    import drt = core.stdc.stdio;
-    alias FILE = drt.FILE;
-} else {
+static if (!NU_COMPILER_STRICT_TYPES) {
     
     /**
         Opaque File Handle
     */
     struct FILE;
+} else {
+    
+    // Fallback for compilers with strict types.
+    import drt = core.stdc.stdio;
+    alias FILE = drt.FILE;
 }
 
 extern(C) nothrow @nogc:

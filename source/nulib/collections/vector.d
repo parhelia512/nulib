@@ -7,7 +7,7 @@
     Authors:   Luna Nielsen
 */
 module nulib.collections.vector;
-import numem.core.memory : nu_is_overlapping;
+import nulib.collections.internal.marray;
 import numem.core.hooks;
 import numem.core.traits;
 import numem;
@@ -29,134 +29,7 @@ struct VectorImpl(T, bool ownsMemory = true) {
 @nogc:
 private:
     alias SelfType = typeof(this);
-
-    // Backing slice of the vector.
-    T[] memory;
-
-    // Memory capacity of the slice.
-    size_t memoryCapacity = 0;
-
-    // Resizing algorithm
-    pragma(inline, true)
-    void resizeImpl(size_t length) @trusted {
-        
-        // Early exit.
-        if (length == memory.length)
-            return;
-
-        // Reserve if over-allocating for the current
-        // size.
-        if (length > memoryCapacity)
-            this.reserveImpl(length);
-
-        // If the new length is lower than the prior length
-        // Destroy the prior allocated objects.
-        if (length < memory.length) {
-            this.deleteRange(memory.ptr[length..memory.length]);
-        }
-
-        // If it's bigger, initialize the memory in the new range.
-        if (length > memory.length) {
-        
-            // Initialize the newly prepared memory by
-            // bliting T.init to it.
-            nogc_initialize(memory.ptr[memory.length..length]);
-        }
-
-        memory = memory.ptr[0..length];
-    }
-
-    // Reservation algorithm
-    pragma(inline, true)
-    void reserveImpl(size_t length) @trusted {
-        if (length == 0) {
-            memory = memory.nu_resize(0);
-            this.memoryCapacity = 0;
-            return;
-        }
-
-        // Resize down if neccesary.
-        size_t sliceSize = memory.length;
-        if (sliceSize > length) {
-            sliceSize = length;
-            this.resizeImpl(sliceSize);
-        }
-
-        memory = memory.nu_resize(length)[0..sliceSize];
-        this.memoryCapacity = length;
-    }
-
-    // Range deletion algorithm.
-    pragma(inline, true)
-    void deleteRange(T[] range) {
-        static if (ownsMemory) {
-            nogc_delete(range);
-        } else {
-            nogc_initialize(range);
-        }
-
-        // Handle array rearrangement.
-        ptrdiff_t startIdx = cast(ptrdiff_t)(range.ptr - memory.ptr);
-        ptrdiff_t endIdx = startIdx+range.length;
-        size_t leftoverCount = (memory.length-endIdx);
-        if (startIdx >= 0) {
-            
-            // Shift old memory in
-            if (endIdx <= memory.length) {
-                nu_memmove(&memory[startIdx], &memory[endIdx], leftoverCount*T.sizeof);
-            }
-
-            // Hide the now invalid memory.
-            memory = memory[0..startIdx+leftoverCount];
-        }
-    }
-
-    // Checks whether src or dst is moving into our memory slice.
-    // This is used in moveRange to allow for overlapping moves.
-    pragma(inline, true)
-    bool isMovingIntoSelf(T[] dst, T[] src) {
-        return 
-            nu_is_overlapping(memory.ptr, memory.length*T.sizeof, dst.ptr, dst.length*T.sizeof) && 
-            nu_is_overlapping(memory.ptr, memory.length*T.sizeof, src.ptr, src.length*T.sizeof);
-    }
-
-    // Range move algorithm.
-    pragma(inline, true)
-    void moveRange(T[] dst, T[] src) {
-
-        // Handle overlapping moves.
-        if (isMovingIntoSelf(dst, src)) {
-            src = rangeCopy(src);
-            static if (hasElaborateMove!T) {
-                nogc_move(dst, src);
-            } else {
-                nogc_copy(dst, src);
-            }
-            src = src.nu_resize(0);
-            return;
-        }
-
-        // Non-overlapping moves.
-        static if (hasElaborateMove!T) {
-            nogc_move(dst, src);
-        } else {
-            nogc_copy(dst, src);
-        }
-    }
-
-    // Range copy for moves internally.
-    pragma(inline, true)
-    T[] rangeCopy(T[] src) {
-        T[] dst;
-
-        dst = dst.nu_resize(src.length);
-        static if (hasElaborateMove!T) {
-            nogc_move(dst, src);
-        } else {
-            nogc_copy(dst, src);
-        }
-        return dst;
-    }
+    ManagedArray!(T, ownsMemory) memory;
 
 public:
     alias value this;
@@ -174,7 +47,7 @@ public:
     /**
         The capacity of the vector.
     */
-    @property size_t capacity() const @safe nothrow { return memoryCapacity; }
+    @property size_t capacity() const @safe nothrow { return memory.capacity; }
 
     /**
         Whether the vector is empty.
@@ -209,8 +82,8 @@ public:
     ~this() {
 
         // This essentially frees the memory.
-        this.reserveImpl(0);
-        this.memoryCapacity = 0;
+        memory.reserve(0);
+        memory.capacity = 0;
     }
 
     /**
@@ -227,14 +100,14 @@ public:
     */
     this(T[] rhs) @system {
         if (__ctfe) {
-            memory = rhs;
-            memoryCapacity = rhs.length;
+            memory.memory = rhs;
+            memory.capacity = rhs.length;
         } else {
             static if (hasElaborateMove!T) {
-                this.resizeImpl(rhs.length);
+                memory.resize(rhs.length);
                 nogc_move(memory, rhs);
             } else {
-                this.resizeImpl(rhs.length);
+                memory.resize(rhs.length);
                 nogc_copy(memory, rhs);
             }
         }
@@ -248,15 +121,14 @@ public:
     */
     this(ref return scope inout(SelfType) rhs) @trusted {
         if (__ctfe) {
-            this.memory = cast(T[])rhs.memory;
-            this.memoryCapacity = rhs.memoryCapacity;
+            this = rhs;
         } else {
             static if (hasElaborateMove!T) {
-                this.resizeImpl(rhs.length);
-                nogc_move(memory, rhs);
+                memory.resize(rhs.length);
+                nogc_move(memory.memory, rhs);
             } else {
-                this.resizeImpl(rhs.length);
-                nogc_copy(memory, cast(SelfType)rhs);
+                memory.resize(rhs.length);
+                nogc_copy(memory.memory, cast(SelfType)rhs);
             }
         }
     }
@@ -278,7 +150,7 @@ public:
         Clears the vector, removing all elements from it.
     */
     void clear() @safe {
-        this.reserveImpl(0);
+        memory.reserve(0);
     }
 
     /**
@@ -287,15 +159,15 @@ public:
         Reserve can *only* grow the allocation; not shrink it.
     */
     void reserve(size_t newSize) {
-        if (newSize > memoryCapacity)
-            this.reserveImpl(newSize);
+        if (newSize > memory.capacity)
+            memory.reserve(newSize);
     }
 
     /**
         Resizes the vector.
     */
     void resize(size_t newSize) {
-        this.resizeImpl(newSize);
+        this.resize(newSize);
     }
 
     /**
@@ -303,7 +175,7 @@ public:
     */
     void popFront() {
         if (!empty) {
-            this.deleteRange(memory[0..1]);
+            memory.deleteRange(memory[0..1]);
         }
     }
 
@@ -317,7 +189,7 @@ public:
                 return;
             }
 
-            this.deleteRange(memory[$-1..$]);
+            memory.deleteRange(memory[$-1..$]);
         }
     }
 
@@ -356,7 +228,7 @@ public:
     */
     void removeAt(size_t i) {
         if (i >= 0 && i < memory.length) {
-            this.deleteRange(memory[i .. i+1]);
+            memory.deleteRange(memory[i .. i+1]);
         }
     }
 
@@ -366,7 +238,7 @@ public:
     */
     void removeAt(size_t i, size_t count) {
         if (i >= 0 && i+count < memory.length) {
-            this.deleteRange(memory[i .. i+count]);
+            memory.deleteRange(memory[i .. i+count]);
         }
     }
 
@@ -382,10 +254,10 @@ public:
 
         // Resize
         size_t ogLength = memory.length;
-        this.resizeImpl(memory.length+1);
+        memory.resize(memory.length+1);
 
         // Move & Insert
-        this.moveRange(memory[offset+1..ogLength+1], memory[offset..ogLength]);
+        memory.moveRange(memory[offset+1..ogLength+1], memory[offset..ogLength]);
         static if (hasElaborateMove!T) {
             this.memory[offset] = value.move();
         } else {
@@ -405,11 +277,11 @@ public:
 
         // Resize
         size_t ogLength = memory.length;
-        this.resizeImpl(memory.length+values.length);
+        memory.resize(memory.length+values.length);
 
         // Move & Insert
-        this.moveRange(memory[offset+values.length..ogLength+values.length], memory[offset..ogLength]);
-        this.moveRange(memory[offset..offset+values.length], values);
+        memory.moveRange(memory[offset+values.length..ogLength+values.length], memory[offset..ogLength]);
+        memory.moveRange(memory[offset..offset+values.length], values);
     }
 
     /**
@@ -419,7 +291,7 @@ public:
             value = The value to append.
     */
     void opOpAssign(string op = "~")(auto ref T value) @trusted {
-        this.resizeImpl(length+1);
+        memory.resize(length+1);
 
         static if (hasElaborateMove!T) {
             this.memory[$-1] = value.move();
@@ -438,16 +310,16 @@ public:
         size_t start = memory.length;
 
         // Self-intersecting move.
-        if (isMovingIntoSelf(memory, other)) {
+        if (memory.isMovingIntoSelf(other)) {
             other = rangeCopy(other);
-            this.resizeImpl(memory.length+other.length);
-            this.moveRange(memory[start..$], other[0..$]);
+            memory.resize(memory.length+other.length);
+            memory.moveRange(memory[start..$], other[0..$]);
             other = other.nu_resize(0);
         }
 
         // Basic move.
-        this.resizeImpl(memory.length+other.length);
-        this.moveRange(memory[start..$], other[0..$]);
+        memory.resize(memory.length+other.length);
+        memory.moveRange(memory[start..$], other[0..$]);
     }
 }
 

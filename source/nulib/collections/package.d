@@ -13,3 +13,4 @@ module nulib.collections;
 public import nulib.collections.vector;
 public import nulib.collections.set;
 public import nulib.collections.map;
+public import nulib.collections.stack;

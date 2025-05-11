@@ -55,6 +55,13 @@ public:
     @property bool empty() const @safe nothrow { return memory.length == 0; }
 
     /**
+        Clears the vector, removing all elements from it.
+    */
+    void clear() @safe {
+        memory.reserve(0);
+    }
+
+    /**
         Pushes an element onto the stack.
 
         Params:
@@ -79,6 +86,28 @@ public:
         } else {
             this.memory[$-1] = value;
         }
+    }
+
+    /**
+        Append a range to the stack.
+
+        Params:
+            other = the other range to append.
+    */
+    void opOpAssign(string op = "~")(T[] other) @trusted {
+        size_t start = memory.length;
+
+        // Self-intersecting move.
+        if (memory.isMovingIntoSelf(other)) {
+            other = rangeCopy(other);
+            memory.resize(memory.length+other.length);
+            memory.moveRange(memory[start..$], other[0..$]);
+            other = other.nu_resize(0);
+        }
+
+        // Basic move.
+        memory.resize(memory.length+other.length);
+        memory.moveRange(memory[start..$], other[0..$]);
     }
 
     /**

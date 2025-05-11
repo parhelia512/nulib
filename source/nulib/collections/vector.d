@@ -111,9 +111,32 @@ private:
         }
     }
 
+    // Checks whether src or dst is moving into our memory slice.
+    // This is used in moveRange to allow for overlapping moves.
+    pragma(inline, true)
+    bool isMovingIntoSelf(T[] dst, T[] src) {
+        return 
+            nu_is_overlapping(memory.ptr, memory.length*T.sizeof, dst.ptr, dst.length*T.sizeof) && 
+            nu_is_overlapping(memory.ptr, memory.length*T.sizeof, src.ptr, src.length*T.sizeof);
+    }
+
     // Range move algorithm.
     pragma(inline, true)
     void moveRange(T[] dst, T[] src) {
+
+        // Handle overlapping moves.
+        if (isMovingIntoSelf(dst, src)) {
+            src = rangeCopy(src);
+            static if (hasElaborateMove!T) {
+                nogc_move(dst, src);
+            } else {
+                nogc_copy(dst, src);
+            }
+            src = src.nu_resize(0);
+            return;
+        }
+
+        // Non-overlapping moves.
         static if (hasElaborateMove!T) {
             nogc_move(dst, src);
         } else {
@@ -127,7 +150,11 @@ private:
         T[] dst;
 
         dst = dst.nu_resize(src.length);
-        this.moveRange(dst, src);
+        static if (hasElaborateMove!T) {
+            nogc_move(dst, src);
+        } else {
+            nogc_copy(dst, src);
+        }
         return dst;
     }
 
@@ -344,6 +371,48 @@ public:
     }
 
     /**
+        Inserts a value into the vector.
+
+        Params:
+            value =     The value to insert.
+            offset =    The offset to insert the value at.
+    */
+    void insert(T value, size_t offset) {
+        assert(offset < memory.length, "Offset is past the end of the vector");
+
+        // Resize
+        size_t ogLength = memory.length;
+        this.resizeImpl(memory.length+1);
+
+        // Move & Insert
+        this.moveRange(memory[offset+1..ogLength+1], memory[offset..ogLength]);
+        static if (hasElaborateMove!T) {
+            this.memory[offset] = value.move();
+        } else {
+            this.memory[offset] = value;
+        }
+    }
+
+    /**
+        Inserts a value into the vector.
+
+        Params:
+            values =    The values to insert.
+            offset =    The offset to insert the values at.
+    */
+    void insert(T[] values, size_t offset) {
+        assert(offset < memory.length, "Offset is past the end of the vector");
+
+        // Resize
+        size_t ogLength = memory.length;
+        this.resizeImpl(memory.length+values.length);
+
+        // Move & Insert
+        this.moveRange(memory[offset+values.length..ogLength+values.length], memory[offset..ogLength]);
+        this.moveRange(memory[offset..offset+values.length], values);
+    }
+
+    /**
         Append a $(D T) to the vector.
 
         Params:
@@ -366,29 +435,19 @@ public:
             other = the other range to append.
     */
     void opOpAssign(string op = "~")(T[] other) @trusted {
-        size_t srcbytes = other.length*T.sizeof;
-        
-        // Early escape.
-        if (srcbytes == 0)
-            return;
-        
-        if (nu_is_overlapping(other.ptr, srcbytes, memory.ptr, usage)) {
+        size_t start = memory.length;
 
-            // If it's overlapping we need to make deeper copies of the unerlying objects.
-            // it's not ideal, but otherwise we get memory corruption.
+        // Self-intersecting move.
+        if (isMovingIntoSelf(memory, other)) {
             other = rangeCopy(other);
-
-            size_t start = memory.length;
             this.resizeImpl(memory.length+other.length);
             this.moveRange(memory[start..$], other[0..$]);
-
             other = other.nu_resize(0);
-        } else {
-
-            size_t start = memory.length;
-            this.resizeImpl(memory.length+other.length);
-            this.moveRange(memory[start..$], other[0..$]);
         }
+
+        // Basic move.
+        this.resizeImpl(memory.length+other.length);
+        this.moveRange(memory[start..$], other[0..$]);
     }
 }
 
@@ -433,4 +492,20 @@ unittest {
 
     numbers.remove(255);
     assert(numbers == [0, 1, 2, 3, 4]);
+}
+
+@(".insert(element)")
+unittest {
+    vector!int numbers = [0, 1, 2, 3, 4];
+
+    numbers.insert(255, 2);
+    assert(numbers == [0, 1, 255, 2, 3, 4]);
+}
+
+@(".insert(elements)")
+unittest {
+    vector!int numbers = [0, 1, 2, 3, 4];
+
+    numbers.insert([255, 255, 255], 2);
+    assert(numbers == [0, 1, 255, 255, 255, 2, 3, 4]);
 }

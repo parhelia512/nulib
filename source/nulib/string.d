@@ -285,6 +285,14 @@ public:
     }
 
     /**
+        Move "constructor"
+    */
+    void opPostMove(ref typeof(this) other) {
+        this.memory = other.memory;
+        nogc_zeroinit(other.memory);
+    }
+
+    /**
         Clears the string, equivalent to resizing it to 0.
     */
     void clear() {

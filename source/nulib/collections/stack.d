@@ -54,6 +54,13 @@ public:
     */
     @property bool empty() const @safe nothrow { return memory.length == 0; }
 
+    ~this() {
+
+        // This essentially frees the memory.
+        memory.reserve(0);
+        memory.capacity = 0;
+    }
+
     /**
         Clears the vector, removing all elements from it.
     */

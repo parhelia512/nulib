@@ -14,12 +14,12 @@ import numem.core.traits;
 import numem;
 
 /**
-    A vector which owns the memory it contains.
+    A stack which owns the memory it contains.
 */
 alias stack(T) = StackImpl!(T, true);
 
 /**
-    A vector which does not own the memory it contains.
+    A stack which does not own the memory it contains.
 */
 alias weak_stack(T) = StackImpl!(T, false);
 

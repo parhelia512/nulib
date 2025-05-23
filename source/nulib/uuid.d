@@ -83,6 +83,22 @@ private:
 public:
 
     /**
+        Length of a UUID string
+    */
+    enum uuidStringLength = 36;
+
+    /**
+        Special "nil" UUID
+    */
+    enum UUID nil = UUID([0LU, 0LU]);
+    alias min = nil;
+
+    /**
+        Special "max" UUID
+    */
+    enum UUID max = UUID([ulong.max, ulong.max]);
+
+    /**
         The underlying data of the UUID.
     */
     @property ubyte[] data() { return this.bdata[0..$]; }
@@ -118,11 +134,6 @@ public:
     
     deprecated("use .uuidVariant instead!")
     alias getVariant = uuidVariant;
-
-    /**
-        Length of a UUID string
-    */
-    enum uuidStringLength = 36;
 
     /**
         Constructs a UUID from the specified byte slice
@@ -188,24 +199,6 @@ public:
         }
 
         return true;
-    }
-
-    /**
-        Special "nil" UUID
-    */
-    static UUID nil() {
-        UUID uuid;
-        return uuid;
-    }
-
-    /**
-        Special "max" UUID
-    */
-    static UUID max() {
-        UUID uuid;
-        uuid.ldata[0] = ulong.max;
-        uuid.ldata[1] = ulong.max;
-        return uuid;
     }
 
     /**
@@ -395,7 +388,7 @@ unittest {
 
     UUID uuid = UUID.createRandom(random);
     scope(exit) nogc_delete(uuid);
-    assert(uuid != UUID.nil());
+    assert(uuid != UUID.nil);
 }
 
 @("uuid: UUID.validate")

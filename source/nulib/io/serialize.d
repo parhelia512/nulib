@@ -1,5 +1,5 @@
 /**
-    Serializable Interface
+    Serialization Interface
 
     Interfaces for creating classes which may be serialized and deserialized.
 
@@ -9,6 +9,8 @@
     Authors:   Luna Nielsen
 */
 module nulib.io.serialize;
+import nulib.string;
+import numem.object;
 
 /**
     Interface a class may implement to indicate it can be serialized.
@@ -17,13 +19,22 @@ interface ISerializable {
 @nogc:
 
     /**
-        Called on the object to serialize it using the given serializer.
+        Called on the object to serialize it using the 
+        given (de)serializer.
 
         Params:
-            serializer = the serializer to use.
+            serde = the (de)serializer to use.
     */
-    void serialize(ref ISerializer serializer);
+    void serialize(ref Serde serde);
 }
+
+/**
+    Gets whether the type can be serialized using an
+    elaborate serializer function.
+*/
+enum hasElaborateSerializer(T) =
+    is(T : ISerializable) ||
+    is(typeof((ref Serde serde) { auto t = T.init; t.serialize(serde); }));
 
 /**
     Interface a class may implement to indicate it can be deserialized.
@@ -32,11 +43,154 @@ interface IDeserializable {
 @nogc:
 
     /**
-        Deserializes state from a deserializer.
+        Called on the object to deserialize it using the 
+        given (de)serializer.
+
+        Params:
+            serde = the (de)serializer to use.
     */
-    void deserialize(ref IDeserializer deserializer);
+    void deserialize(ref Serde serde);
 }
 
-interface ISerializer { }
+/**
+    Gets whether the type can be deserialized using an
+    elaborate serializer function.
+*/
+enum hasElaborateDeserializer(T) =
+    is(T : IDeserializable) ||
+    is(typeof((ref Serde serde) { auto t = T.init; t.deserialize(serde); }));
 
-interface IDeserializer { }
+/**
+    A (de)serializer.
+*/
+abstract
+class Serde {
+protected:
+@nogc:
+
+    /**
+        A serialization function which serializes a string.
+
+        Params:
+            value = The value to serialize.
+    */
+    abstract void serializeString(string value);
+
+    /**
+        A serialization function which serializes a signed integer.
+        (max 64-bit)
+
+        Params:
+            value = The value to serialize, sign extended.
+            bytes = The actual amount of bytes to serialize.
+    */
+    abstract void serializeInt(long value, ubyte bytes);
+
+    /**
+        A serialization function which serializes an unsigned
+        integer. (max 64-bit)
+
+        Params:
+            value = The value to serialize, sign extended.
+            bytes = The actual amount of bytes to serialize.
+    */
+    abstract void serializeUInt(ulong value, ubyte bytes);
+
+    /**
+        A serialization function which serializes a floating
+        point number. (max 64-bit)
+
+        Params:
+            value = The value to serialize.
+            bytes = The actual amount of bytes to serialize.
+    */
+    abstract void serializeFloat(double value, ubyte bytes);
+
+    /**
+        A deserialization function which deserializes a string.
+
+        Returns:
+            The deserialized value
+    */
+    abstract nstring deserializeString();
+
+    /**
+        A serialization function which serializes a signed integer.
+        (max 64-bit)
+
+        Params:
+            bytes = The amount of bytes to deserialize.
+
+        Returns:
+            The deserialized value
+    */
+    abstract long deserializeInt(ubyte bytes);
+
+    /**
+        A serialization function which serializes an unsigned
+        integer. (max 64-bit)
+
+        Params:
+            bytes = The amount of bytes to deserialize.
+
+        Returns:
+            The deserialized value
+    */
+    abstract ulong deserializeUInt(ubyte bytes);
+
+    /**
+        A serialization function which serializes a floating
+        point number. (max 64-bit)
+
+        Params:
+            bytes = The amount of bytes to deserialize.
+
+        Returns:
+            The deserialized value
+    */
+    abstract double deserializeFloat(ubyte bytes);
+
+public:
+
+    /**
+        The name of the format that the (de)serializer 
+        supports.
+    */
+    abstract @property string format();
+
+    /**
+        The public serialization interface.
+    */
+    void serialize(T)(auto ref T item) {
+        static if (is(T : string)) {
+            serializeString(item);
+        } else static if (__traits(isFloating, T)) {
+            serializeFloat(cast(double)item, T.sizeof);
+        } else static if (__traits(isIntegral, T) && __traits(isUnsigned, T)) {
+            serializeUInt(cast(ulong)item, T.sizeof);
+        } else static if (__traits(isIntegral, T) && !__traits(isUnsigned, T)) {
+            serializeInt(cast(ulong)item, T.sizeof);
+        } else static if (hasElaborateSerializer!T) {
+            Serde self = this;
+            item.serialize(self);
+        } static assert(0, "Can't serialize given type "~T.stringof~".");
+    }
+    
+    /**
+        The public deserialization interface.
+    */
+    void deserialize(T)(auto ref T item) { 
+        static if (is(T : string)) {
+            serializeString(item);
+        } else static if (__traits(isFloating, T)) {
+            serializeFloat(cast(double)item, T.sizeof);
+        } else static if (__traits(isIntegral, T) && __traits(isUnsigned, T)) {
+            serializeUInt(cast(ulong)item, T.sizeof);
+        } else static if (__traits(isIntegral, T) && !__traits(isUnsigned, T)) {
+            serializeInt(cast(ulong)item, T.sizeof);
+        } else static if (hasElaborateDeserializer!T) {
+            Serde self = this;
+            item.deserialize(self);
+        } static assert(0, "Can't deserialize given type "~T.stringof~".");
+    }
+}

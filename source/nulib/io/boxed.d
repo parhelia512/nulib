@@ -31,13 +31,13 @@ public:
         The name of the boxed type.
     */
     final
-    @property string typeName() => T.stringof;
+    @property string typeName() { return T.stringof; }
 
     /**
         Unboxes the value in the type.
     */
     final
-    T unbox() => value;
+    T unbox() { return value; }
 
     /**
         Called on the object to serialize it using the 

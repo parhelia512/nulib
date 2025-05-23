@@ -17,10 +17,11 @@ enum UUIDVariant {
 }
 
 /**
-    Length of a UUID string
-*/
-enum UUIDStringLength = 36;
+    Creates a UUID object at compile time from a UUID string.
 
+    Params:
+        uuid = The UUID string to generate a UUID object from.
+*/
 template CTUUID(string uuid) {
     UUID genUUID(string slice) {
         import std.conv : to;
@@ -80,7 +81,48 @@ private:
     }
 
 public:
-    @property data() { return this.bdata; }
+
+    /**
+        The underlying data of the UUID.
+    */
+    @property ubyte[] data() { return this.bdata[0..$]; }
+
+    /**
+        The version of the UUID structure
+    */
+    @property int uuidVersion() {
+        return cast(int)(time_hi_and_version >> 12);
+    }
+
+    deprecated("use .uuidVersion instead!")
+    alias getVersion = uuidVersion;
+
+    /**
+        The variant of the UUID structure
+    */
+    @property UUIDVariant uuidVariant() {
+        enum ncsMask = 0b00000100;
+        enum rfcMask = 0b00000110;
+        enum msMask = 0b00000110;
+        ubyte variant = cast(ubyte)(clk_seq >> 13);
+        
+        if ((variant & ncsMask) == 0) 
+            return UUIDVariant.ncs;
+        if ((variant & rfcMask) == 4) 
+            return UUIDVariant.rfc4122;
+        if ((variant & msMask) == 6) 
+            return UUIDVariant.microsoft;
+        
+        return UUIDVariant.reserved;
+    }
+    
+    deprecated("use .uuidVariant instead!")
+    alias getVariant = uuidVariant;
+
+    /**
+        Length of a UUID string
+    */
+    enum uuidStringLength = 36;
 
     /**
         Constructs a UUID from the specified byte slice
@@ -127,10 +169,10 @@ public:
     static bool validate(string slice) {
 
         // Incorrect length
-        if (slice.length != UUIDStringLength)
+        if (slice.length != UUID.uuidStringLength)
             return false;
 
-        foreach(i; 0..UUIDStringLength) {
+        foreach(i; 0..UUID.uuidStringLength) {
             
             // Dash positions
             if (i == 8 || i == 13 || i == 18 || i == 23) {
@@ -167,7 +209,13 @@ public:
     }
 
     /**
-        Creates a new UUIDv3 with a specified random number generator
+        Creates a new UUIDv3 with a specified random number generator.
+
+        Params:
+            random = The random number generator to use.
+        
+        Returns:
+            A new psuedorandomly generated UUID.
     */
     static UUID createRandom(RandomBase random) {
         UUID uuid;
@@ -183,9 +231,12 @@ public:
 
     /**
         Tries to parse a UUID from a string.
+        
+        Params:
+            slice = The string slice to parse.
 
         Returns:
-            A nil UUID on failure.
+            A new UUID parsed from the string, or a nil UUID on failure.
     */
     static UUID parse(string slice) {
         if (!UUID.validate(slice))
@@ -212,32 +263,6 @@ public:
             slice = slice[2..$];
         }
         return uuid;
-    }
-
-    /**
-        Gets the version of the UUID structure
-    */
-    int getVersion() {
-        return cast(int)(time_hi_and_version >> 12);
-    }
-
-    /**
-        Gets the variant of the UUID structure
-    */
-    UUIDVariant getVariant() {
-        enum ncsMask = 0b00000100;
-        enum rfcMask = 0b00000110;
-        enum msMask = 0b00000110;
-        ubyte variant = cast(ubyte)(clk_seq >> 13);
-        
-        if ((variant & ncsMask) == 0) 
-            return UUIDVariant.ncs;
-        if ((variant & rfcMask) == 4) 
-            return UUIDVariant.rfc4122;
-        if ((variant & msMask) == 6) 
-            return UUIDVariant.microsoft;
-        
-        return UUIDVariant.reserved;
     }
 
     /**
@@ -333,13 +358,13 @@ unittest {
         UUID uuid = UUID.parse(tests[i]);
 
         assert(
-            uuid.getVariant() == UUIDVariant.rfc4122,
-            "Expected RFC4122, got %s".format(uuid.getVariant().text)
+            uuid.uuidVariant == UUIDVariant.rfc4122,
+            "Expected RFC4122, got %s".format(uuid.uuidVariant.text)
         );
 
         assert(
-            uuid.getVersion() == versions[i], 
-            "uuid=%s (test %s), version=%s, expected=%s!".format(tests[i], i+1, uuid.getVersion(), versions[i])
+            uuid.uuidVersion == versions[i], 
+            "uuid=%s (test %s), version=%s, expected=%s!".format(tests[i], i+1, uuid.uuidVersion, versions[i])
         );
     }
 }

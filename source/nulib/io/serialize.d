@@ -10,7 +10,7 @@
 */
 module nulib.io.serialize;
 import nulib.string;
-import numem.object;
+import numem;
 
 /**
     Interface a class may implement to indicate it can be serialized.
@@ -64,9 +64,17 @@ enum hasElaborateDeserializer(T) =
     A (de)serializer.
 */
 abstract
-class Serde {
-protected:
+class Serde : NuObject {
+private:
 @nogc:
+    SerdeContext ctx;
+
+protected:
+
+    /**
+        Called when the serialization context is initialized.
+    */
+    abstract SerdeContext onInit();
 
     /**
         A serialization function which serializes a string.
@@ -150,7 +158,27 @@ protected:
     */
     abstract double deserializeFloat(ubyte bytes);
 
+    /**
+        Begins a complex serialization context.
+    */
+    abstract SerdeContext beginComplexContext();
+
+    /**
+        Ends a complex serde context.
+    */
+    abstract void endComplexContext(SerdeContext ctx);
+
 public:
+
+    // Destructor
+    ~this() { nogc_delete(ctx); }
+
+    /**
+        Constructs a Serde object.
+    */
+    this() {
+        ctx = this.onInit();
+    }
 
     /**
         The name of the format that the (de)serializer 
@@ -193,4 +221,48 @@ public:
             item.deserialize(self);
         } static assert(0, "Can't deserialize given type "~T.stringof~".");
     }
+}
+
+/**
+    A context used during (de)serialization to traverse complex
+    nested serialization trees.
+*/
+abstract
+class SerdeContext : NuObject  {
+private:
+    Serde owner_;
+
+public:
+@nogc:
+
+    /**
+        Constructor for a context.
+    */
+    this(Serde owner) { this.owner_ = owner; }
+
+    /**
+        The owner object which created the context.
+    */
+    final
+    @property Serde owner() { return owner_; }
+
+    /**
+        Begins an object within the context.
+    */
+    abstract SerdeContext beginObject();
+
+    /**
+        Ends an object within the context.
+    */
+    abstract void endObject(SerdeContext object);
+
+    /**
+        Begins a data range within the context.
+    */
+    abstract SerdeContext beginRange();
+
+    /**
+        Ends a data range within the context.
+    */
+    abstract void endRange(SerdeContext object);
 }

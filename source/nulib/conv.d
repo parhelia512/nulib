@@ -16,6 +16,10 @@ import numem.core.traits;
 import numem.core.hooks;
 import numem.core.exception;
 
+// TODO:    This entire module should be rewritten into pure D.
+//          Relying on the C standard library here is probably
+//          not the best idea for portability.
+
 /**
     Converts the given string slice to an integral value.
 

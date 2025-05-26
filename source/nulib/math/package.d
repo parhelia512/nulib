@@ -56,7 +56,7 @@ enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF)
     Returns:
         The smallest of the 2 given values.
 */
-T min(T)(T lhs, T rhs) if (__traits(isScalar, T)) {
+T min(T)(T lhs, T rhs) {
     return lhs < rhs ? lhs : rhs;
 }
 
@@ -70,7 +70,7 @@ T min(T)(T lhs, T rhs) if (__traits(isScalar, T)) {
     Returns:
         The largest of the 2 given values.
 */
-T max(T)(T lhs, T rhs) if (__traits(isScalar, T)) {
+T max(T)(T lhs, T rhs) {
     return lhs > rhs ? lhs : rhs;
 }
 
@@ -86,45 +86,23 @@ T max(T)(T lhs, T rhs) if (__traits(isScalar, T)) {
         $(D value) clamped between $(D min_) and $(D max_),
         equivalent of $(D min(max(value, min_), max_))
 */
-T clamp(T)(T value, T min_, T max_) if (__traits(isScalar, T)) {
+T clamp(T)(T value, T min_, T max_) {
     return min(max(value, min_), max_);
 }
 
-
 /**
-    Gets whether the value's sign bit is set.
+    Modulates the given value, preserving sign bit.
 
     Params:
-        x = The value to check
-    
+        value   = The value to modulate.
+        delta   = The modulation delta.
+
     Returns:
-        $(D true) if the value is signed (positive),
-        $(D false) otherwise.
+        The modulated value.
 */
-bool signbit(T)(T x) @trusted @nogc nothrow pure if (__traits(isScalar, T)) {
-    static if (__traits(isFloating, T)) {
-
-        double tmp = cast(double)x;
-        return 0 > (*cast(long*)&tmp);
-    } else {
-
-        return 0 > x;
-    }
-}
-
-/**
-    Copies the sign-bit from one value to another.
-
-    Params:
-        to =    The value to copy to
-        from =  The value to copy from
-    
-    Returns:
-        The value of $(D to) with the sign bit flipped
-        to match $(D from).
-*/
-T copysign(T)(T to, T from) @safe @nogc nothrow pure if (__traits(isScalar, T)) {
-    return signbit(to) == signbit(from) ? to : -to;
+pragma(inline, true)
+auto mod(T)(T value, T delta) {
+    return copysign(abs(value) % abs(delta), value);
 }
 
 /**
@@ -185,4 +163,40 @@ T cubic(T)(T p0, T p1, T p2, T p3, float t) {
     T d = p1;
     
     return a * (t ^^ 3) + b * (t ^^ 2) + c * t + d;
+}
+
+/**
+    Gets whether the value's sign bit is set.
+
+    Params:
+        x = The value to check
+    
+    Returns:
+        $(D true) if the value is signed (positive),
+        $(D false) otherwise.
+*/
+bool signbit(T)(T x) @trusted @nogc nothrow pure if (__traits(isScalar, T)) {
+    static if (__traits(isFloating, T)) {
+
+        double tmp = cast(double)x;
+        return 0 > (*cast(long*)&tmp);
+    } else {
+
+        return 0 > x;
+    }
+}
+
+/**
+    Copies the sign-bit from one value to another.
+
+    Params:
+        to =    The value to copy to
+        from =  The value to copy from
+    
+    Returns:
+        The value of $(D to) with the sign bit flipped
+        to match $(D from).
+*/
+T copysign(T)(T to, T from) @safe @nogc nothrow pure if (__traits(isScalar, T)) {
+    return signbit(to) == signbit(from) ? to : -to;
 }

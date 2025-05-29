@@ -408,7 +408,7 @@ template matchImpl(bool try_, handlers...) {
                         return mixin(handlerName!(matches[caseId]), "(", handlerArgs!caseId, ")");
                     else {
                         static if (!try_) {
-                            static assert(false, "No matching handler for types `", valueTypes!caseId.stringof, "`!");
+                            static assert(false, "No matching handler for types `"~valueTypes!(caseId).stringof~"`!");
                         }
                     } 
             }

@@ -121,7 +121,7 @@ public:
 */
 template canMatch(alias handler, Types...)
 if (Types.length > 0) {
-    enum canMatch = is(typeof(auto ref(ref Types args) => handler(args)));
+    enum canMatch = is(typeof((ref Types args) { return handler(args); }));
 }
 
 /**

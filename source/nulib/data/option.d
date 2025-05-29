@@ -5,7 +5,7 @@ public import nulib.data.sumtype;
     An option type that wraps an optional value.
 
     Use sumtype matching to extract the value or
-    $(D unwrap)
+    $(D expect)
 */
 alias Option(T) = SumType!(Nothing, T);
 

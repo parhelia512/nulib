@@ -12,7 +12,9 @@
         Luna Nielsen
 */
 module nulib.data.sumtype;
-import nulib.data.internal.traits;
+import numem.core.lifetime : forward;
+import numem.core.traits;
+import numem.core.meta;
 import numem;
 
 /**
@@ -407,8 +409,6 @@ template matchImpl(bool try_, handlers...) {
                     else {
                         static if (!try_) {
                             static assert(false, "No matching handler for types `", valueTypes!caseId.stringof, "`!");
-                        } else {
-
                         }
                     } 
             }

@@ -101,7 +101,7 @@ public:
     /**
         The underlying data of the UUID.
     */
-    @property ubyte[] data() { return this.bdata[0..$]; }
+    @property ubyte[] data() return { return this.bdata[0..$]; }
 
     /**
         The version of the UUID structure

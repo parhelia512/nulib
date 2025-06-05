@@ -131,7 +131,7 @@ public:
         
         T tmp = memory[$-1].move();
         memory.resize(length-1);
-        return tmp.move();
+        return tmp;
     }
 
     /**

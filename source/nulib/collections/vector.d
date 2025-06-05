@@ -167,7 +167,7 @@ public:
         Resizes the vector.
     */
     void resize(size_t newSize) {
-        this.resize(newSize);
+        memory.resize(newSize);
     }
 
     /**

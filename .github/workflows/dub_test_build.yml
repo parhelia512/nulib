@@ -22,6 +22,16 @@ on:
         default: false
         required: false
         type: boolean
+      linux_deps:
+        description: 'Space seperated dependencies to install on ubuntu.'
+        default: ''
+        required: false
+        type: string
+      osx_deps:
+        description: 'Space seperated dependencies to install on macOS.'
+        default: ''
+        required: false
+        type: string
       run_tests:
         description: 'Whether tests should be run'
         default: false
@@ -51,6 +61,16 @@ jobs:
       uses: dlang-community/setup-dlang@v2
       with:
         compiler: ${{ matrix.dc }}
+      
+    - name: 'Install linux dependencies...'
+      if: ${{ inputs.linux_deps != '' && matrix.os == 'ubuntu-latest' }}
+      run: |
+        sudo apt install -y ${{ inputs.linux_deps }}
+      
+    - name: 'Install osx dependencies...'
+      if: ${{ inputs.osx_deps != '' && matrix.os == 'macOS-latest' }}
+      run: |
+        sudo homebrew install ${{ inputs.osx_deps }}
     
     - name: 'Checkout ${{ github.repository }}'
       uses: actions/checkout@v4

@@ -259,9 +259,9 @@ public:
         // Move & Insert
         memory.moveRange(memory[offset+1..ogLength+1], memory[offset..ogLength]);
         static if (hasElaborateMove!T) {
-            this.memory[offset] = value.move();
+            memory.memory[offset] = value.move();
         } else {
-            this.memory[offset] = value;
+            memory.memory[offset] = value;
         }
     }
 
@@ -294,9 +294,9 @@ public:
         memory.resize(length+1);
 
         static if (hasElaborateMove!T) {
-            this.memory[$-1] = value.move();
+            memory.memory[$-1] = value.move();
         } else {
-            this.memory[$-1] = value;
+            memory.memory[$-1] = value;
         }
     }
 

@@ -40,7 +40,10 @@ template CTUUID(string uuid) {
             uuid.time_hi_and_version = slice[0..4].to!ushort(16);
             slice = slice[5..$];
 
-            uuid.clk_seq = slice[0..4].to!ushort(16);
+            ubyte clk0 = slice[0..2].to!ubyte(16);
+            ubyte clk1 = slice[2..4].to!ubyte(16);
+
+            uuid.clk_seq = cast(ushort)(clk1 << 8 | clk0);
             slice = slice[5..$];
 
             static foreach(i; 0..6) {
@@ -152,12 +155,13 @@ public:
         this.time_low = time_low;
         this.time_mid = time_mid;
         this.time_hi_and_version = time_hi_and_version;
+        this.clk_seq = cast(ushort)(clk1 << 8 | clk0);
         this.node[0] = d0;
-        this.node[1] = d0;
-        this.node[2] = d0;
-        this.node[3] = d0;
-        this.node[4] = d0;
-        this.node[5] = d0;
+        this.node[1] = d1;
+        this.node[2] = d2;
+        this.node[3] = d3;
+        this.node[4] = d4;
+        this.node[5] = d5;
     }   
 
     /**

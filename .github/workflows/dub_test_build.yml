@@ -98,5 +98,5 @@ jobs:
       working-directory: '${{ inputs.repo }}'
       if: ${{ inputs.run_tests }}
       run: |
-        dub test --build=debug
-        dub test --build=release
+        dub test ${{ env.DUB_BUILD_CFG_FLAG }} --build=debug
+        dub test ${{ env.DUB_BUILD_CFG_FLAG }} --build=release

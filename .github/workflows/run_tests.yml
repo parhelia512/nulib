@@ -51,6 +51,7 @@ jobs:
             config: unittest
             version: "99.0.0"
             may_fail: false
+            run_tests: true
     
     needs: test
     uses: ./.github/workflows/dub_test_build.yml

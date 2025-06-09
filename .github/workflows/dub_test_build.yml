@@ -22,6 +22,12 @@ on:
         default: false
         required: false
         type: boolean
+      run_tests:
+        description: 'Whether tests should be run'
+        default: false
+        required: false
+        type: boolean
+
 
 name: 'Dub dependant build-check'
 run-name: 'Build-check ${{ inputs.repo }} ${{ inputs.repo_tag }}'
@@ -35,6 +41,9 @@ jobs:
       matrix:
         os: [macOS-latest, ubuntu-latest, windows-latest]
         dc: [ldc, ldc-beta, dmd, dmd-beta]
+    env:
+      DUB_BUILD_CFG_FLAG: ${{ inputs.dep_config != '' && format('--config={0}', inputs.dep_config) || '' }}
+      DUB_BUILD_CFG_NAME: ${{ inputs.dep_config != '' && inputs.dep_config || 'default' }}
     
     runs-on: ${{ matrix.os }}
     steps:
@@ -59,16 +68,15 @@ jobs:
         ref: '${{ inputs.repo_tag }}'
         path: '${{ inputs.repo }}'
       
-    - name: 'Attempt build with specified config'
+    - name: 'Attempting ${{ env.DUB_BUILD_CFG_NAME }} build...'
       working-directory: '${{ inputs.repo }}'
-      if: ${{ inputs.dep_config != 'unittest' }}
       run: |
-        dub build --config=${{ inputs.dep_config }} --build=debug
-        dub build --config=${{ inputs.dep_config }} --build=release
+        dub build ${{ env.DUB_BUILD_CFG_FLAG }} --build=debug
+        dub build ${{ env.DUB_BUILD_CFG_FLAG }} --build=release
       
-    - name: 'Attempt unittest'
+    - name: 'Attempting to run tests...'
       working-directory: '${{ inputs.repo }}'
-      if: ${{ inputs.dep_config == 'unittest' }}
+      if: ${{ inputs.run_tests }}
       run: |
         dub test --build=debug
         dub test --build=release

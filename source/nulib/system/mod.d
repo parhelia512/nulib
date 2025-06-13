@@ -9,38 +9,139 @@
     Authors:   Luna Nielsen
 */
 module nulib.system.mod;
+import nulib.collections.vector;
 import nulib.system;
 import nulib.string;
 import numem;
 
 /**
     A higher level wrapper over OS level modules/shared libraries.
+
+    The module is lazy-loading, meaning segment and symbol lists
+    will only be enumerated when requested; this in turn means
+    modules can be relatively lightweight.
 */
 class Module : NuRefCounted {
 private:
 @nogc:
+    __gshared Module _self;
     Handle handle;
-    Section[] sections;
+
+    void* baseaddr;
+    SectionInfo[] sections_;
+    Symbol[] symbols_;
+
+    // Cleanup function.
+    void cleanup() {
+
+        // Free sections.
+        foreach(ref section; sections_) {
+            section.segment = section.segment.nu_resize(0);
+            section.section = section.segment.nu_resize(0);
+        }
+        this.sections_ = sections_.nu_resize(0);
+
+        // Free symbols.
+        foreach(ref symbol; symbols_) {
+            symbol.name = symbol.name.nu_resize(0);
+        }
+        this.symbols_ = symbols_.nu_resize(0);
+    }
 
 public:
 
     /**
-        Constructs a new module.
+        List of all sections in the module.
+    */
+    final
+    @property SectionInfo[] sections() {
+        if (!baseaddr)
+            return null;
+        
+        if (!sections_)
+            this.sections_ = _nu_module_enumerate_sections(baseaddr);
+        return sections_;
+    }
+
+    /**
+        List of all exported symbols in the module.
+    */
+    final
+    @property Symbol[] symbols() {
+        if (!baseaddr)
+            return null;
+        
+        if (!this.symbols_)
+            this.symbols_ = _nu_module_enumerate_symbols(baseaddr);
+        return symbols_; 
+    }
+
+    /**
+        Gets the calling module.
+    */
+    static @property Module self() {
+        if (!_self)
+            _self = nogc_new!Module(null);
+        
+        return _self;
+    }
+
+    /**
+        Loads a module from the given path.
+
+        This function has more "smarts" than the constructor, and will
+        transform the incoming path to find the library in question.
+
+        This includes things like looking up macOS bundles, and the like.
+
+        Params:
+            pathOrName = Path to; or name of the module to load.
+        
+        Returns:
+            A new module, or $(D null) if the module failed to load.
+    */
+    static Module load(string pathOrName) {
+        if (!pathOrName)
+            return null;
+
+        Module mod = nogc_new!Module(_nu_module_transform_path(pathOrName));
+        if (mod.handle is null) {
+            mod.release();
+            return null;
+        }
+
+        return mod;
+    }
+
+    /**
+        Loads a module from a path into this application's address space,
+        without doing any path transformations.
+
+        It is recommended to use $(D Module.load) instead of this.
+
+        Params:
+            path = Path to a module.
     */
     this(string path) { 
-        this.handle = _nu_open_module(path);
-        this.sections = _nu_module_enumerate_sections(handle);
+        if (!path) {
+            this.handle = cast(Handle)_nu_module_open(null);
+        } else if (_nu_module_utf16_paths()) {
+            nwstring wpath = path;
+            this.handle = cast(Handle)_nu_module_open(cast(void*)wpath.ptr);
+        } else {
+            nstring wpath = path;
+            this.handle = cast(Handle)_nu_module_open(cast(void*)wpath.ptr);
+        }
+
+        this.baseaddr = _nu_module_get_base_address(handle);
     }
 
     /**
         Destructor
     */
     ~this() {
-        foreach(ref section; sections)
-            nogc_delete(section);
-        this.sections = sections.nu_resize(0);
-
-        _nu_close_module(handle);
+        this.cleanup();
+        _nu_module_close(handle);
     }
     
     /**
@@ -55,60 +156,50 @@ public:
     */
     final
     void* getSymbol(string sym) {
-        return _nu_module_get_symbol(handle, sym);
-    }
-}
-
-/**
-    A section within a module
-*/
-class Section : NuObject {
-private:
-@nogc:
-    Module module_;
-    Symbol[] symbols_;
-    string segmentName;
-    string sectionName;
-
-public:
-
-    /**
-        The name of the segment this section resides in
-    */
-    @property string segment() { return segmentName; }
-
-    /**
-        The name of this section
-    */
-    @property string section() { return sectionName; }
-
-    /**
-        The name of this section
-    */
-    @property Symbol[] symbols() { return symbols_; }
-
-    /**
-        Destructor
-    */
-    ~this() {
-        this.module_.release();
-
-        // Free symbols and names.
-        foreach(ref symbol; symbols_)
-            symbol.name = symbol.name.nu_resize(0);
-        this.symbols_ = symbols_.nu_resize(0);
-        this.segmentName = segmentName.nu_resize(0);
-        this.sectionName = sectionName.nu_resize(0);
+        nstring psym = sym;
+        return _nu_module_get_symbol(handle, psym.ptr);
     }
 
     /**
-        Constructor
+        Lists all symbols within the given section.
+
+        Params:
+            section = The section to query.
+        
+        Returns:
+            A weak vector containing the symbols within the given
+            section's memory space..
     */
-    this(Module module_, Symbol[] symbols, string segment, string section) {
-        this.module_ = module_.retained;
-        this.symbols_ = symbols;
-        this.segmentName = segment;
-        this.sectionName = section;
+    weak_vector!Symbol createSymbolListFor(SectionInfo section) {
+        weak_vector!Symbol rsymbols;
+
+        Symbol[] syms = symbols;
+        foreach(i; 0..syms.length) 
+            if (syms[i].ptr >= section.start && syms[i].ptr <= section.end)
+                rsymbols ~= syms[i];
+        
+        return rsymbols;
+    }
+
+    /**
+        Gets the section which a symbol belongs to.
+
+        Params:
+            sym = Pointer to a symbol in the module, as returned by $(D getSymbol).
+        
+        Returns:
+            A reference to a section info object describing the section, 
+            owned by the module, or $(D null) if not found.
+    */
+    final
+    SectionInfo* getSymbolSection(void* sym) {
+        SectionInfo[] sects = sections;
+        foreach(i; 0..sects.length) 
+            if (sym >= sects[i].start && sym <= sects[i].end)
+                return &sects[i];
+
+        // Not found.
+        return null;
     }
 }
 
@@ -116,6 +207,7 @@ public:
     A symbol within a section.
 */
 struct Symbol {
+@nogc:
 
     /**
         Name of the symbol
@@ -128,7 +220,40 @@ struct Symbol {
     void* ptr;
 }
 
+/**
+    Information about sections.
+*/
+struct SectionInfo {
+@nogc:
+    
+    /**
+        Segment of the section, if applicable.
+    */
+    string segment;
 
+    /**
+        Name of the section
+    */
+    string section;
+
+    /**
+        Start address of the section
+    */
+    void* start;
+
+    /**
+        End address of the section
+    */
+    void* end;
+}
+
+@("Load self module")
+unittest {
+    Module m = Module.self;
+    assert(m.handle !is null);
+    assert(m.sections.length > 0);
+    assert(m.symbols.length > 0);
+}
 
 //
 //          FOR IMPLEMENTORS
@@ -138,12 +263,17 @@ private extern(C):
 import core.attribute : weak;
 
 /*
-    Function which loads a module from the given path.
+    Optional helper function for platforms which have special kinds of "Modules",
+    eg. Framework Bundles on macOS.
 
-    This is implemented by backends to abstract away the OS intricaices
-    of loading modules and finding symbols within.
+    See: https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Concepts/FrameworkAnatomy.html
 */
-Handle _nu_open_module(string path) @weak @nogc nothrow { return null; }
+string _nu_module_transform_path(string path) @weak @nogc nothrow { return path; }
+
+/**
+    Optional helper that defines whether paths are in UTF-16 format.
+*/
+bool _nu_module_utf16_paths() @weak @nogc nothrow { return false; }
 
 /*
     Function which loads a module from the given path.
@@ -151,7 +281,15 @@ Handle _nu_open_module(string path) @weak @nogc nothrow { return null; }
     This is implemented by backends to abstract away the OS intricaices
     of loading modules and finding symbols within.
 */
-void _nu_close_module(Handle module_) @weak @nogc nothrow { return; }
+void* _nu_module_open(void* path) @weak @nogc nothrow { return null; }
+
+/*
+    Function which loads a module from the given path.
+
+    This is implemented by backends to abstract away the OS intricaices
+    of loading modules and finding symbols within.
+*/
+void _nu_module_close(void* module_) @weak @nogc nothrow { return; }
 
 /*
     Function which finds a symbol within a given module
@@ -159,12 +297,23 @@ void _nu_close_module(Handle module_) @weak @nogc nothrow { return; }
     This is implemented by backends to abstract away the OS intricaices
     of loading modules and finding symbols within.
 */
-void* _nu_module_get_symbol(Handle module_, string symbol) @weak @nogc nothrow { return null; }
+void* _nu_module_get_symbol(void* module_, const(char)* symbol) @weak @nogc nothrow { return null; }
 
-/**
-    Function which enumerates the sections in a module.
+/*
+    Function which gets the "base address" of the module.
 
-    This is implemented by backends to abstract away the OS intricaices
-    of loading modules and finding symbols within.
+    This is backend implementation defined; but is what should allow
+    $(D _nu_module_enumerate_sections) and $(D _nu_module_enumerate_symbols)
+    to function.
 */
-Section[] _nu_module_enumerate_sections(Handle handle) @weak @nogc nothrow { return null; }
+void* _nu_module_get_base_address(void* module_) @weak @nogc nothrow { return null; }
+
+/*
+    Function which enumerates all of the sections within a module.
+*/
+SectionInfo[] _nu_module_enumerate_sections(void* base) @weak @nogc nothrow { return null; }
+
+/*
+    Function which enumerates all of the exported symbols.
+*/
+Symbol[] _nu_module_enumerate_symbols(void* base)  @weak @nogc nothrow { return null; }

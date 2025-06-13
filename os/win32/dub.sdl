@@ -1,8 +1,10 @@
 name "win32"
 
+dependency "numem" version=">=1.1.4"
+
 configuration "lib" {
     platforms "windows"
-    targetType "library"
+    targetType "staticLibrary"
 }
 
 configuration "none" {

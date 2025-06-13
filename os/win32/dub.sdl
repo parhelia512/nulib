@@ -1,0 +1,10 @@
+name "win32"
+
+configuration "lib" {
+    platforms "windows"
+    targetType "library"
+}
+
+configuration "none" {
+    targetType "none"
+}

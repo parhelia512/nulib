@@ -1,0 +1,10 @@
+name "appleos"
+
+configuration "lib" {
+    platforms "osx" "ios" "watchos" "tvos" "visionos"
+    targetType "library"
+}
+
+configuration "none" {
+    targetType "none"
+}

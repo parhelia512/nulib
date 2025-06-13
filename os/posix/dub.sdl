@@ -1,0 +1,10 @@
+name "posix"
+
+configuration "lib" {
+    platforms "posix"
+    targetType "library"
+}
+
+configuration "none" {
+    targetType "none"
+}

@@ -3,8 +3,10 @@
 
     This module implements @nogc BTree-backed sets, replacement for std::set.
 
-    Copyright: Copyright © 2023-2025, Kitsunebi Games
-    Copyright: Copyright © 2023-2025, Inochi2D Project
+    Copyright:
+        Copyright © 2023-2025, Kitsunebi Games
+        Copyright © 2023-2025, Inochi2D Project
+    
     Copyright: Guillaume Piolat 2015-2024.
     Copyright: Copyright (C) 2008- by Steven Schveighoffer. Other code
     Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.

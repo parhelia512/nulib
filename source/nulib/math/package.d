@@ -8,8 +8,10 @@
         As such these math functions may not be the most performant.
 
     Copyright: Copyright The D Language Foundation 2000 - 2011.
-    Copyright: Copyright © 2023-2025, Kitsunebi Games
-    Copyright: Copyright © 2023-2025, Inochi2D Project
+    Copyright:
+        Copyright © 2023-2025, Kitsunebi Games
+        Copyright © 2023-2025, Inochi2D Project
+    
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:
         $(HTTP digitalmars.com, Walter Bright), 

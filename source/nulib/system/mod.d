@@ -1,3 +1,13 @@
+/**
+    Shared Library Modules
+
+    Copyright:
+        Copyright © 2025, Kitsunebi Games
+        Copyright © 2025, Inochi2D Project
+    
+    License:   $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost License 1.0)
+    Authors:   Luna Nielsen
+*/
 module nulib.system.mod;
 import nulib.system;
 import nulib.string;
@@ -37,15 +47,15 @@ public:
         Gets a symbol from the module.
 
         Params:
-            symbolname = The name of the symbol to get.
+            sym = The name of the symbol to get.
         
         Returns:
             A pointer to the symbol or $(D null) if the
             symbol was not found.
     */
     final
-    void* getSymbol(string symbolName) {
-        return _nu_module_get_symbol(handle, symbolName);
+    void* getSymbol(string sym) {
+        return _nu_module_get_symbol(handle, sym);
     }
 }
 

@@ -222,6 +222,10 @@ Symbol[] _nu_module_enumerate_symbols(void* base) @nogc nothrow {
     return syms;
 }
 
+//
+//          SYSTEM SPECIFIC IMPLEMENTATIONS
+//
+
 void* _nu_module_win32_verify_pe(void* base) @nogc nothrow {
     ushort magic = *cast(ushort*) base;
 
@@ -262,6 +266,12 @@ PeSectionHeader[] _nu_module_win32_get_section_headers(void* handle) @nogc nothr
     return start[0..nthdr.mNumberOfSections];
 }
 
+
+//
+//          HELPERS
+//
+
+extern(D)
 string _fstrz(const(char)* str) @nogc nothrow {
     size_t i = 0;
     while(str[i] != '\0') i++;

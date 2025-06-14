@@ -125,6 +125,7 @@ void* _nu_module_get_base_address(void* module_) @nogc nothrow {
 //
 //          SYSTEM SPECIFIC IMPLEMENTATIONS
 //
+
 version(Darwin) {
 
     SectionInfo[] _nu_module_enumerate_sections(void* base) @nogc nothrow {
@@ -311,12 +312,15 @@ version(Darwin) {
 //
 //          HELPERS
 //
+
+extern(D)
 string _nu_strz(const(char)* str) @nogc nothrow {
     size_t i = 0;
     while(str[i] != '\0') i++;
     return cast(string)str[0..i];
 }
 
+extern(D)
 uint _nu_ntoh(uint val) {
     ubyte* bval = cast(ubyte*)cast(ulong*)&val;
     return 
@@ -326,6 +330,7 @@ uint _nu_ntoh(uint val) {
         (bval[3] << 0 );
 }
 
+extern(D)
 ulong _nu_ntoh(ulong val) {
     ubyte* bval = cast(ubyte*)cast(ulong*)&val;
     return 

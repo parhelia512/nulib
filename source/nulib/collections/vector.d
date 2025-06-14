@@ -314,6 +314,7 @@ public:
         // Self-intersecting move.
         if (memory.isMovingIntoSelf(other)) {
             other = rangeCopy(other);
+            
             memory.resize(memory.length+other.length);
             memory.moveRange(memory[start..$], other[0..$]);
             other = other.nu_resize(0);

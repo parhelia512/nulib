@@ -12,7 +12,8 @@ module nulib.string;
 import numem.core.hooks;
 import numem.core.traits;
 import numem.core.memory;
-import numem;    
+import numem;
+import nulib.collections.internal.marray;
 import nulib.text.unicode : 
     encode, 
     decode;
@@ -160,7 +161,7 @@ private:
 
         // NOTE: nu_terminatd re-allocates the slice twice,
         // As such we put a smaller implementation here.
-        memory.nu_resize(newLength+1);
+        memory = memory.nu_resize(newLength+1);
         (cast(T*)memory.ptr)[newLength] = '\0';
         memory = memory[0..$-1];
     }
@@ -337,6 +338,16 @@ public:
     */
     void opOpAssign(string op = "~")(inout(T)[] other) @trusted {
         size_t start = memory.length;
+
+        if (isOverlapping(memory, other)) {
+            other = other.nu_dup();
+
+            this.resizeImpl(memory.length+other.length);
+            this.setRangeImpl(memory[start..$], other[0..$]);
+            other = other.nu_resize(0);
+            return;
+        }
+
         this.resizeImpl(memory.length+other.length);
         this.setRangeImpl(memory[start..$], other[0..$]);
     }

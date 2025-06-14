@@ -68,7 +68,7 @@ struct ManagedArray(T, bool ownsMemory = true) {
 
     // Range deletion algorithm.
     pragma(inline, true)
-    void deleteRange(T[] range) {
+    void deleteRange(U)(U[] range) if (is(Unconst!U == Unconst!T)) {
         static if (ownsMemory) {
             nogc_delete(range);
         } else {
@@ -83,7 +83,7 @@ struct ManagedArray(T, bool ownsMemory = true) {
             
             // Shift old memory in
             if (endIdx < memory.length) {
-                nu_memmove(&memory[startIdx], &memory[endIdx], leftoverCount*T.sizeof);
+                nu_memmove(cast(void*)&memory[startIdx], cast(void*)&memory[endIdx], leftoverCount*T.sizeof);
             }
 
             // Hide the now invalid memory.
@@ -94,23 +94,23 @@ struct ManagedArray(T, bool ownsMemory = true) {
     // Checks whether src or dst is moving into our memory slice.
     // This is used in moveRange to allow for overlapping moves.
     pragma(inline, true)
-    bool isMovingIntoSelf(T[] dst, T[] src) {
+    bool isMovingIntoSelf(U)(U[] dst, U[] src) if (is(Unconst!U == Unconst!T)) {
         return 
-            nu_is_overlapping(memory.ptr, memory.length*T.sizeof, dst.ptr, dst.length*T.sizeof) && 
-            nu_is_overlapping(memory.ptr, memory.length*T.sizeof, src.ptr, src.length*T.sizeof);
+            nu_is_overlapping(cast(void*)memory.ptr, memory.length*T.sizeof, cast(void*)dst.ptr, dst.length*T.sizeof) && 
+            nu_is_overlapping(cast(void*)memory.ptr, memory.length*T.sizeof, cast(void*)src.ptr, src.length*T.sizeof);
     }
 
     // Checks whether src or dst is moving into our memory slice.
     // This is used in moveRange to allow for overlapping moves.
     pragma(inline, true)
-    bool isMovingIntoSelf(T[] src) {
+    bool isMovingIntoSelf(U)(U[] src) if (is(Unconst!U == Unconst!T)) {
         return 
-            nu_is_overlapping(memory.ptr, memory.length*T.sizeof, src.ptr, src.length*T.sizeof);
+            nu_is_overlapping(cast(void*)memory.ptr, memory.length*T.sizeof, cast(void*)src.ptr, src.length*T.sizeof);
     }
 
     // Range move algorithm.
     pragma(inline, true)
-    void moveRange(T[] dst, T[] src) {
+    void moveRange(U)(U[] dst, U[] src) if (is(Unconst!U == Unconst!T)) {
 
         // Handle overlapping moves.
         if (isMovingIntoSelf(dst, src)) {
@@ -131,18 +131,89 @@ struct ManagedArray(T, bool ownsMemory = true) {
             nogc_copy(dst, src);
         }
     }
+
+    // Reverses the contents of the array
+    pragma(inline, true)
+    void reverse() {
+        alias U = Unconst!(T)[];
+
+        if (memory.length == 0)
+            return;
+
+        U tmp;
+        foreach(i; 0..memory.length/2) {
+            size_t lhs = i;
+            size_t rhs = memory.length-i;
+
+            tmp = (cast(U[])memory)[lhs];
+            (cast(U[])memory)[lhs] = (cast(U[])memory)[rhs];
+            (cast(U[])memory)[rhs] = tmp;
+        }
+    }
+
+    // Flips the endianness of the elements within the array.
+    pragma(inline, true)
+    void flipEndian() {
+        alias U = Unconst!(T)[];
+
+        static if (T.sizeof > 1) {
+            import nulib.memory.endian : nu_etoh, ALT_ENDIAN;
+
+            U[] ucMemory = cast(U[])memory;
+            cast(void)nu_etoh!(U[], ALT_ENDIAN)(ucMemory);
+        }
+    }
+}
+
+// Checks whether 2 memory ranges overlap.
+pragma(inline, true)
+bool isOverlapping(T, U)(T[] dst, U[] src) if (is(Unconst!U == Unconst!T)) {
+    return 
+        nu_is_overlapping(cast(void*)dst.ptr, dst.length*T.sizeof, cast(void*)src.ptr, src.length*T.sizeof);
+}
+
+// Reverses the contents of the array
+pragma(inline, true)
+void arrReverse(T)(T[] memory) {
+    alias U = Unconst!(T)[];
+
+    if (memory.length == 0)
+        return;
+
+    U tmp;
+    foreach(i; 0..memory.length/2) {
+        size_t lhs = i;
+        size_t rhs = memory.length-i;
+
+        tmp = (cast(U[])memory)[lhs];
+        (cast(U[])memory)[lhs] = (cast(U[])memory)[rhs];
+        (cast(U[])memory)[rhs] = tmp;
+    }
+}
+
+// Flips the endianness of the elements within the array.
+pragma(inline, true)
+void arrFlipEndian(T)(T[] memory) {
+    static if (T.sizeof > 1) {
+        alias U = Unconst!(T)[];
+        import nulib.memory.endian : nu_etoh, ALT_ENDIAN;
+    
+        cast(void)nu_etoh!(U[], ALT_ENDIAN)(cast(U[])memory);
+    }
 }
 
 // Range copy for moves internally.
 pragma(inline, true)
 T[] rangeCopy(T)(T[] src) {
-    T[] dst;
+    alias UT = Unconst!(T)[];
 
+    UT[] dst;
     dst = dst.nu_resize(src.length);
     static if (hasElaborateMove!T) {
-        nogc_move(dst, src);
+        nogc_move(cast(UT)dst[0..$], cast(UT)src[0..$]);
     } else {
-        nogc_copy(dst, src);
+        nogc_copy(cast(UT)dst[0..$], cast(UT)src[0..$]);
     }
-    return dst;
+    
+    return cast(T[])dst;
 }

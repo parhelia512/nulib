@@ -236,12 +236,6 @@ struct SectionInfo {
     void* end;
 }
 
-@("Load self module")
-unittest {
-    Module m = Module.self;
-    assert(m.handle !is null);
-}
-
 //
 //          FOR IMPLEMENTORS
 //

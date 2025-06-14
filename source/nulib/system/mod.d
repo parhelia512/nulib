@@ -66,6 +66,14 @@ public:
     }
 
     /**
+        The base address the module is loaded into.
+    */
+    final
+    @property void* baseAddress() {
+        return baseaddr;
+    }
+
+    /**
         Gets the calling module.
     */
     static @property Module self() {
@@ -130,6 +138,7 @@ public:
     */
     ~this() {
         this.cleanup();
+        _nu_module_release_base_address(handle);
         _nu_module_close(handle);
     }
     
@@ -294,6 +303,16 @@ void* _nu_module_get_symbol(void* module_, const(char)* symbol) @weak @nogc noth
 */
 pragma(LDC_extern_weak)
 void* _nu_module_get_base_address(void* module_) @weak @nogc nothrow;
+
+/*
+    Function which releases the "base address" of the module.
+
+    This is backend implementation defined; but is what should allow
+    $(D _nu_module_enumerate_sections) and $(D _nu_module_enumerate_symbols)
+    to function.
+*/
+pragma(LDC_extern_weak)
+void _nu_module_release_base_address(void* module_) @weak @nogc nothrow;
 
 /*
     Function which enumerates all of the sections within a module.

@@ -89,7 +89,13 @@ bool _nu_module_utf16_paths() @nogc nothrow {
 */
 export
 void* _nu_module_open(void* path) @nogc nothrow {
-    return dlopen(cast(const(char)*)path, 0);
+    version(Darwin) {
+        if (path is null)
+            path = cast(void*)_dyld_get_image_name(0);
+    }
+
+    void* handle = dlopen(cast(const(char)*)path, 0);
+    return handle;
 }
 
 /*
@@ -125,12 +131,18 @@ export
 void* _nu_module_get_base_address(void* module_) @nogc nothrow {
     version(Darwin) {
         foreach(i; 0.._dyld_image_count()) {
+
+            // Find the image.
             const(char)* imageName = _dyld_get_image_name(i);
             void* imageHandle = dlopen(imageName, 0);
             cast(void)dlclose(imageHandle);
 
-            if (module_ == imageHandle)
-		return _dyld_get_image_header(i);
+            if (module_ == imageHandle) {
+                return nogc_new!mach_image(
+                    cast(mach_header_64*)_dyld_get_image_header(i),
+                    _dyld_get_image_vmaddr_slide(i)
+                );
+            }
         }
         return null;
     } else {
@@ -143,29 +155,28 @@ void* _nu_module_get_base_address(void* module_) @nogc nothrow {
     }
 }
 
-//
-//          SYSTEM SPECIFIC IMPLEMENTATIONS
-//
+export
+void _nu_module_release_base_address(void* module_) @nogc nothrow {
+    version(Darwin) {
+        if (module_)
+            nu_free(cast(mach_image*)module_);
+    }
+}
 
-version(Darwin) {
-
-    export
-    SectionInfo[] _nu_module_enumerate_sections(void* base) @nogc nothrow {
-        load_command* lcmd;
-        uint ncmds;
-        bool reqFlip;
-        bool is32;
-        _nu_module_darwin_get_load_cmds(base, lcmd, ncmds, reqFlip, is32);
-
-        import std.stdio : printf;
-        printf("_nu_module_enumerate_sections\n");
+export
+SectionInfo[] _nu_module_enumerate_sections(void* base) @nogc nothrow {
+    version(Darwin) {
+        mach_image* image = cast(mach_image*)base;
+        if (!_nu_module_darwin_get_is_supported(image))
+            return null;
         
+        uint symtabCount;
         SectionInfo[] allSections;
-        foreach(i; 0..ncmds) {
+        load_command* lcmd = _nu_module_get_first_command(image);
+        foreach(i; 0..image.header.ncmds) {
 
             SectionInfo[] sections;
-            uint cmd = reqFlip ? _nu_ntoh(lcmd.cmd) : lcmd.cmd;
-            if (cmd == LC_SEGMENT) {
+            if (lcmd.cmd == LC_SEGMENT) {
 
                 segment_command_32* segcmd = cast(segment_command_32*)(cast(void*)lcmd);
                 sections = sections.nu_resize(segcmd.nsects);
@@ -174,19 +185,15 @@ version(Darwin) {
 
                     sections[j].segment = _nu_module_darwin_get_name(sect.segname);
                     sections[j].section = _nu_module_darwin_get_name(sect.sectname);
-                    sections[j].start = reqFlip ? 
-                        cast(void*)_nu_ntoh(sect.addr) : 
-                        cast(void*)sect.addr;
-                    sections[j].end = reqFlip ? 
-                        cast(void*)_nu_ntoh(sect.addr+sect.size) : 
-                        cast(void*)sect.addr+sect.size;
+                    sections[j].start = cast(void*)sect.addr+image.vmaddrSlide;
+                    sections[j].end = cast(void*)sect.addr+image.vmaddrSlide+sect.size;
 
                     // Next section.
                     sect++;
                 }
 
                 allSections = _nu_module_darwin_combine_sect_infos(allSections, sections);
-            } else if (cmd == LC_SEGMENT_64) {
+            } else if (lcmd.cmd == LC_SEGMENT_64) {
                 
                 segment_command_64* segcmd = cast(segment_command_64*)(cast(void*)lcmd);
                 sections = sections.nu_resize(segcmd.nsects);
@@ -195,12 +202,8 @@ version(Darwin) {
 
                     sections[j].segment = _nu_module_darwin_get_name(sect.segname);
                     sections[j].section = _nu_module_darwin_get_name(sect.sectname);
-                    sections[j].start = reqFlip ? 
-                        cast(void*)_nu_ntoh(sect.addr) : 
-                        cast(void*)sect.addr;
-                    sections[j].end = reqFlip ? 
-                        cast(void*)_nu_ntoh(sect.addr+sect.size) : 
-                        cast(void*)sect.addr+sect.size;
+                    sections[j].start = cast(void*)sect.addr+image.vmaddrSlide;
+                    sections[j].end = cast(void*)sect.addr+image.vmaddrSlide+sect.size;
 
                     // Next section.
                     sect++;
@@ -209,12 +212,88 @@ version(Darwin) {
                 allSections = _nu_module_darwin_combine_sect_infos(allSections, sections);
             }
 
-            lcmd = cast(load_command*)((cast(void*)lcmd)+lcmd.cmdsize);
+            if (lcmd.cmd == LC_SYMTAB)
+                symtabCount++;
+
+            lcmd = _nu_module_darwin_next_command(lcmd);
         }
 
         return allSections;
+    } else {
+        return null;
     }
-    
+}
+
+export
+Symbol[] _nu_module_enumerate_symbols(void* base) @nogc nothrow {
+    version(Darwin) {
+        mach_image* image = cast(mach_image*)base;
+        if (!_nu_module_darwin_get_is_supported(image))
+            return null;
+
+        // MH_DYLIB_IN_CACHE
+        if (image.header.flags & 0x80000000)
+            return null;
+
+        // Locate nlists
+        symtab_command* symcmd = cast(symtab_command*)_nu_module_darwin_find_command(image, LC_SYMTAB);
+        if (!symcmd)
+            return null;
+        
+        const(char)* strtab = cast(const(char)*)(base + image.vmaddrSlide + symcmd.stroff);
+        nlist[]      symtab = (cast(nlist*)(base + symcmd.symoff))[0..symcmd.nsyms];
+
+        // Fill out symbols.
+        size_t nlen = 0;
+        Symbol[] allSymbols;
+        allSymbols = allSymbols.nu_resize(symcmd.nsyms);
+        foreach(j; 0..symcmd.nsyms) {
+            nlist nl = symtab[j];
+            if (nl.n_strx == 0)
+                continue;
+            
+            // Externally defined.
+            if (nl.n_type & 0x01)
+                continue;
+
+            void* addr = base+nl.n_value;
+            ubyte typeFlag = nl.n_type & 0x0e;
+
+            // No symbol
+            if (typeFlag == 0x00)
+                addr = null;
+            
+            // Absolute symbol.
+            if (typeFlag == 0x02)
+                addr = cast(void*)nl.n_value;
+            
+            // TODO: Implement indirect symbols.
+            if (typeFlag == 0xa0)
+                addr = null;
+
+            allSymbols[nlen++] = Symbol(_nu_strz(strtab+nl.n_strx), addr);
+        }
+
+        // If we found no symbols just empty the list.
+        if (nlen == 0) {
+            allSymbols = allSymbols.nu_resize(0);
+            return null;
+        }
+        return allSymbols[0..nlen];
+    } else {
+        return null;
+    }
+}
+
+
+
+
+
+//
+//          SYSTEM SPECIFIC HELPERS
+//
+
+version(Darwin) {
     string _nu_module_darwin_get_name(ref char[16] name) @nogc nothrow {
         foreach(i; 0..name.length) {
             if (name[i] == '\0')
@@ -237,65 +316,47 @@ version(Darwin) {
         return c;
     }
 
-    void _nu_module_darwin_get_load_cmds(void* base, ref load_command* first, ref uint ncmds, ref bool reqFlip, ref bool is32) @nogc nothrow {
-        uint magic = *cast(uint*)base;
-        
-        reqFlip = 
-            magic == MH_CIGAM ||
-            magic == MH_CIGAM_64;
-
-        is32 = 
-            magic == MH_MAGIC || 
-            magic == MH_CIGAM;
-
-        if (is32) {
-
-            mach_header_32* hdr = cast(mach_header_32*)base;
-            ncmds = reqFlip ? _nu_ntoh(hdr.ncmds) : hdr.ncmds;
-            first = cast(load_command*)(base+mach_header_32.sizeof);
-        } else {
-            
-            mach_header_64* hdr = cast(mach_header_64*)base;
-            ncmds = reqFlip ? _nu_ntoh(hdr.ncmds) : hdr.ncmds;
-            first = cast(load_command*)(base+mach_header_64.sizeof);
-        }
+    /**
+        Gets whether the given image is valid
+    */
+    bool _nu_module_darwin_get_is_supported(mach_image* image) @nogc nothrow {
+        return image !is null && (
+            image.header.magic == MH_MAGIC || 
+            image.header.magic == MH_MAGIC_64
+        );
     }
 
-    export
-    Symbol[] _nu_module_enumerate_symbols(void* base) @nogc nothrow {
-        load_command* lcmd;
-        uint ncmds;
-        bool reqFlip;
-        bool is32;
-        _nu_module_darwin_get_load_cmds(base, lcmd, ncmds, reqFlip, is32);
-        
-        Symbol[] allSymbols;
-        foreach(i; 0..ncmds) {
+    /*
+        Gets the first load command
+    */
+    load_command* _nu_module_get_first_command(mach_image* image) @nogc nothrow {
+        return cast(load_command*)(
+            image.header.magic == MH_MAGIC ?
+                (cast(void*)image.header)+mach_header_32.sizeof :
+                (cast(void*)image.header)+mach_header_64.sizeof
+        );
+    }
 
-            Symbol[] syms;
-            uint cmd = reqFlip ? _nu_ntoh(lcmd.cmd) : lcmd.cmd;
-            if (cmd == LC_SYMTAB) {
+    /*
+        Gets the load command with the requested name.
+    */
+    load_command* _nu_module_darwin_find_command(mach_image* image, uint magic) @nogc nothrow {
+        load_command* cmd = _nu_module_get_first_command(image);
+        foreach(i; 0..image.header.ncmds) {
+            if (cmd.cmd == magic)
+                return cmd;
 
-                // Locate nlists
-                void* symbase = cast(void*)lcmd;
-                symtab_command* symtab = cast(symtab_command*)symbase;
-                nlist[] nlist_ = (cast(nlist*)((cast(void*)symtab)+symtab.symoff))[0..symtab.nsyms];
-
-                // Fill out symbols.
-                syms = syms.nu_resize(symtab.nsyms);
-                foreach(j; 0..symtab.nsyms) {
-
-                    const(char)* symbol = cast(const(char)*)((symbase+symtab.stroff)+nlist_[j].n_strx);
-                    syms[j] = Symbol(_nu_strz(symbol), cast(void*)nlist_[j].n_value);
-                }
-                
-                allSymbols = _nu_module_darwin_combine_syms(allSymbols, syms);
-            }
-
-            lcmd = cast(load_command*)((cast(void*)lcmd)+lcmd.cmdsize);
+            cmd = _nu_module_darwin_next_command(cmd);
         }
+        return null;
+    }
 
-        return allSymbols;
+    /*
+        Gets the next command.
+    */
+    pragma(inline, true)
+    load_command* _nu_module_darwin_next_command(load_command* cmd) @nogc nothrow {
+        return cast(load_command*)((cast(void*)cmd)+cmd.cmdsize);
     }
 
     Symbol[] _nu_module_darwin_combine_syms(Symbol[] a, Symbol[] b) @nogc nothrow {
@@ -335,30 +396,6 @@ string _nu_strz(const(char)* str) @nogc nothrow {
     return cast(string)str[0..i];
 }
 
-extern(D)
-uint _nu_ntoh(uint val) @nogc nothrow {
-    ubyte* bval = cast(ubyte*)cast(uint*)&val;
-    return 
-        (cast(uint)bval[0] << 24) |
-        (cast(uint)bval[1] << 16) |
-        (cast(uint)bval[2] << 8 ) |
-        (cast(uint)bval[3] << 0 );
-}
-
-extern(D)
-ulong _nu_ntoh(ulong val) @nogc nothrow {
-    ubyte* bval = cast(ubyte*)cast(ulong*)&val;
-    return 
-        (cast(ulong)bval[0] << 56) |
-        (cast(ulong)bval[1] << 48) |
-        (cast(ulong)bval[2] << 40) |
-        (cast(ulong)bval[3] << 32) |
-        (cast(ulong)bval[4] << 24) |
-        (cast(ulong)bval[5] << 16) |
-        (cast(ulong)bval[6] << 8 ) |
-        (cast(ulong)bval[7] << 0 );
-}
-
 
 //
 //          LOCAL BINDINGS
@@ -380,17 +417,21 @@ version(Darwin) {
     extern(C) extern int _dyld_image_count() @nogc nothrow;
     extern(C) extern void* _dyld_get_image_header(uint) @nogc nothrow;
     extern(C) extern const(char)* _dyld_get_image_name(uint) @nogc nothrow;
+    extern(C) extern ptrdiff_t _dyld_get_image_vmaddr_slide(uint) @nogc nothrow;
 
     enum uint
         MH_MAGIC_64 = 0xfeedfacf,
-        MH_CIGAM_64 = 0xcffaedfe,
-        MH_MAGIC = 0xfeedface,
-        MH_CIGAM = 0xcefaedfe;
+        MH_MAGIC = 0xfeedface;
     
     enum uint
-        LC_SEGMENT = 0x1,
         LC_SYMTAB = 0x2,
+        LC_SEGMENT = 0x1,
         LC_SEGMENT_64 = 0x19;
+
+    struct mach_image {
+        mach_header_64* header;
+        ptrdiff_t vmaddrSlide;
+    }
 
     struct mach_header_32 {
         uint magic;
@@ -480,7 +521,7 @@ version(Darwin) {
         ubyte n_type;
         ubyte n_sect;
         ushort n_desc;
-        ulong n_value;
+        size_t n_value;
     }
 
     struct symtab_command {

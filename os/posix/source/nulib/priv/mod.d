@@ -83,7 +83,7 @@ private extern (C):
 */
 export
 void* _nu_module_open(void* path) @nogc nothrow {
-    return dlopen(cast(const(wchar)*)path, 0);
+    return dlopen(cast(const(char)*)path, 0);
 }
 
 /*
@@ -299,12 +299,11 @@ version(Darwin) {
 } else {
 
     SectionInfo[] _nu_module_enumerate_sections(void* base) @nogc nothrow {
-        SectionInfo[] sections;
+        return null;
     }
 
     Symbol[] _nu_module_enumerate_symbols(void* base) @nogc nothrow {
-        string[] segments;
-        string[] sections;
+        return null;
     }
 }
 

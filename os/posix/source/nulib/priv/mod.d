@@ -8,7 +8,7 @@
     License:   $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Authors:   Luna Nielsen
 */
-module private.mod;
+module nulib.priv.mod;
 
 version (OSX)
     version = Darwin;

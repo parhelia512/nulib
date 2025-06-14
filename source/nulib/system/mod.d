@@ -33,18 +33,7 @@ private:
 
     // Cleanup function.
     void cleanup() {
-
-        // Free sections.
-        foreach(ref section; sections_) {
-            section.segment = section.segment.nu_resize(0);
-            section.section = section.segment.nu_resize(0);
-        }
         this.sections_ = sections_.nu_resize(0);
-
-        // Free symbols.
-        foreach(ref symbol; symbols_) {
-            symbol.name = symbol.name.nu_resize(0);
-        }
         this.symbols_ = symbols_.nu_resize(0);
     }
 

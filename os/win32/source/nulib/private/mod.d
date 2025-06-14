@@ -9,6 +9,8 @@
     Authors:   Luna Nielsen
 */
 module nulib.priv.mod;
+extern(Windows):
+
 import numem;
 
 /**
@@ -148,7 +150,7 @@ SectionInfo[] _nu_module_enumerate_sections(void* base) @nogc nothrow {
     foreach(i, ref PeSectionHeader shdr; shdrs) {
         sections[i] = SectionInfo(
             null,
-            _nu_module_get_sect_name(shdr.mName).nu_dup,
+            _nu_module_get_sect_name(shdr.mName),
             base+shdr.mVirtualAddress,
             base+shdr.mVirtualAddress+shdr.mVirtualSize 
         );

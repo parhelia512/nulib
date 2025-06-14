@@ -75,6 +75,12 @@ struct SectionInfo {
 
 private extern (C):
 
+/**/
+export
+bool _nu_module_utf16_paths() @nogc nothrow {
+    return false;
+}
+
 /*
     Function which loads a module from the given path.
 
@@ -92,6 +98,7 @@ void* _nu_module_open(void* path) @nogc nothrow {
     This is implemented by backends to abstract away the OS intricaices
     of loading modules and finding symbols within.
 */
+export
 void _nu_module_close(void* module_) @nogc nothrow {
     cast(void) dlclose(module_);
 }
@@ -102,6 +109,7 @@ void _nu_module_close(void* module_) @nogc nothrow {
     This is implemented by backends to abstract away the OS intricaices
     of loading modules and finding symbols within.
 */
+export
 void* _nu_module_get_symbol(void* module_, const(char)* symbol) @nogc nothrow {
     return dlsym(module_, symbol);
 }
@@ -113,13 +121,26 @@ void* _nu_module_get_symbol(void* module_, const(char)* symbol) @nogc nothrow {
     $(D _nu_module_enumerate_sections) and $(D _nu_module_enumerate_symbols)
     to function.
 */
+export
 void* _nu_module_get_base_address(void* module_) @nogc nothrow {
+    version(Darwin) {
+        foreach(i; 0.._dyld_image_count()) {
+            const(char)* imageName = _dyld_get_image_name(i);
+            void* imageHandle = dlopen(imageName, 0);
+            cast(void)dlclose(imageHandle);
 
-    Dl_info info;
-    if (dladdr(module_, info) != 0)
-        return info.dli_fbase;
+            if (module_ == imageHandle)
+		return _dyld_get_image_header(i);
+        }
+        return null;
+    } else {
 
-    return null;
+        Dl_info info;
+        if (dladdr(module_, info) != 0)
+            return info.dli_fbase;
+
+        return null;
+    }
 }
 
 //
@@ -128,13 +149,16 @@ void* _nu_module_get_base_address(void* module_) @nogc nothrow {
 
 version(Darwin) {
 
+    export
     SectionInfo[] _nu_module_enumerate_sections(void* base) @nogc nothrow {
         load_command* lcmd;
         uint ncmds;
         bool reqFlip;
         bool is32;
-        if (!_nu_module_darwin_get_load_cmds(base, lcmd, ncmds, reqFlip, is32))
-            return null;
+        _nu_module_darwin_get_load_cmds(base, lcmd, ncmds, reqFlip, is32);
+
+        import std.stdio : printf;
+        printf("_nu_module_enumerate_sections\n");
         
         SectionInfo[] allSections;
         foreach(i; 0..ncmds) {
@@ -146,14 +170,14 @@ version(Darwin) {
                 segment_command_32* segcmd = cast(segment_command_32*)(cast(void*)lcmd);
                 sections = sections.nu_resize(segcmd.nsects);
                 section_32* sect = cast(section_32*)(cast(void*)lcmd+segment_command_32.sizeof);
-                foreach(i; 0..segcmd.nsects) {
+                foreach(j; 0..segcmd.nsects) {
 
-                    sections[i].segment = _nu_module_darwin_get_name(sect.segname);
-                    sections[i].section = _nu_module_darwin_get_name(sect.sectname);
-                    sections[i].start = reqFlip ? 
+                    sections[j].segment = _nu_module_darwin_get_name(sect.segname);
+                    sections[j].section = _nu_module_darwin_get_name(sect.sectname);
+                    sections[j].start = reqFlip ? 
                         cast(void*)_nu_ntoh(sect.addr) : 
                         cast(void*)sect.addr;
-                    sections[i].end = reqFlip ? 
+                    sections[j].end = reqFlip ? 
                         cast(void*)_nu_ntoh(sect.addr+sect.size) : 
                         cast(void*)sect.addr+sect.size;
 
@@ -167,14 +191,14 @@ version(Darwin) {
                 segment_command_64* segcmd = cast(segment_command_64*)(cast(void*)lcmd);
                 sections = sections.nu_resize(segcmd.nsects);
                 section_64* sect = cast(section_64*)(cast(void*)lcmd+segment_command_64.sizeof);
-                foreach(i; 0..segcmd.nsects) {
+                foreach(j; 0..segcmd.nsects) {
 
-                    sections[i].segment = _nu_module_darwin_get_name(sect.segname);
-                    sections[i].section = _nu_module_darwin_get_name(sect.sectname);
-                    sections[i].start = reqFlip ? 
+                    sections[j].segment = _nu_module_darwin_get_name(sect.segname);
+                    sections[j].section = _nu_module_darwin_get_name(sect.sectname);
+                    sections[j].start = reqFlip ? 
                         cast(void*)_nu_ntoh(sect.addr) : 
                         cast(void*)sect.addr;
-                    sections[i].end = reqFlip ? 
+                    sections[j].end = reqFlip ? 
                         cast(void*)_nu_ntoh(sect.addr+sect.size) : 
                         cast(void*)sect.addr+sect.size;
 
@@ -200,9 +224,9 @@ version(Darwin) {
     }
 
     SectionInfo[] _nu_module_darwin_combine_sect_infos(SectionInfo[] a, SectionInfo[] b) @nogc nothrow {
-        if (!a)
-            return b;
-        
+        if (!a && b) return b;
+	if (a && !b) return a;        
+
         SectionInfo[] c;
         c = c.nu_resize(a.length+b.length);
         c[0..a.length]   = a[0..$];
@@ -213,15 +237,9 @@ version(Darwin) {
         return c;
     }
 
-    bool _nu_module_darwin_get_load_cmds(void* base, ref load_command* first, ref uint ncmds, ref bool reqFlip, ref bool is32) @nogc nothrow {
+    void _nu_module_darwin_get_load_cmds(void* base, ref load_command* first, ref uint ncmds, ref bool reqFlip, ref bool is32) @nogc nothrow {
         uint magic = *cast(uint*)base;
-        bool isValid = 
-            (magic == MH_MAGIC || magic == MH_MAGIC_64) || 
-            (magic == MH_CIGAM || magic == MH_CIGAM_64);
         
-        if (!isValid)
-            return false;
-
         reqFlip = 
             magic == MH_CIGAM ||
             magic == MH_CIGAM_64;
@@ -241,17 +259,15 @@ version(Darwin) {
             ncmds = reqFlip ? _nu_ntoh(hdr.ncmds) : hdr.ncmds;
             first = cast(load_command*)(base+mach_header_64.sizeof);
         }
-
-        return true;
     }
 
+    export
     Symbol[] _nu_module_enumerate_symbols(void* base) @nogc nothrow {
         load_command* lcmd;
         uint ncmds;
         bool reqFlip;
         bool is32;
-        if (!_nu_module_darwin_get_load_cmds(base, lcmd, ncmds, reqFlip, is32))
-            return null;
+        _nu_module_darwin_get_load_cmds(base, lcmd, ncmds, reqFlip, is32);
         
         Symbol[] allSymbols;
         foreach(i; 0..ncmds) {
@@ -263,14 +279,14 @@ version(Darwin) {
                 // Locate nlists
                 void* symbase = cast(void*)lcmd;
                 symtab_command* symtab = cast(symtab_command*)symbase;
-                nlist[] nlist_ = cast(nlist*)((cast(void*)symtab)+symhdr.symoff)[0..symhdr.nsyms];
+                nlist[] nlist_ = (cast(nlist*)((cast(void*)symtab)+symtab.symoff))[0..symtab.nsyms];
 
                 // Fill out symbols.
-                syms = sections.nu_resize(symhdr.nsyms);
-                foreach(j; 0..symhdr.nsyms) {
+                syms = syms.nu_resize(symtab.nsyms);
+                foreach(j; 0..symtab.nsyms) {
 
                     const(char)* symbol = cast(const(char)*)((symbase+symtab.stroff)+nlist_[j].n_strx);
-                    syms[j] = Symbol(_nu_strz(symbol), nlist_[j].n_value);
+                    syms[j] = Symbol(_nu_strz(symbol), cast(void*)nlist_[j].n_value);
                 }
                 
                 allSymbols = _nu_module_darwin_combine_syms(allSymbols, syms);
@@ -283,9 +299,9 @@ version(Darwin) {
     }
 
     Symbol[] _nu_module_darwin_combine_syms(Symbol[] a, Symbol[] b) @nogc nothrow {
-        if (!a)
-            return b;
-        
+        if (!a && b) return b;
+	if (a && !b) return a;        
+
         Symbol[] c;
         c = c.nu_resize(a.length+b.length);
         c[0..a.length]   = a[0..$];
@@ -320,7 +336,7 @@ string _nu_strz(const(char)* str) @nogc nothrow {
 }
 
 extern(D)
-uint _nu_ntoh(uint val) {
+uint _nu_ntoh(uint val) @nogc nothrow {
     ubyte* bval = cast(ubyte*)cast(uint*)&val;
     return 
         (cast(uint)bval[0] << 24) |
@@ -330,7 +346,7 @@ uint _nu_ntoh(uint val) {
 }
 
 extern(D)
-ulong _nu_ntoh(ulong val) {
+ulong _nu_ntoh(ulong val) @nogc nothrow {
     ubyte* bval = cast(ubyte*)cast(ulong*)&val;
     return 
         (cast(ulong)bval[0] << 56) |
@@ -361,6 +377,10 @@ struct Dl_info {
 }
 
 version(Darwin) {
+    extern(C) extern int _dyld_image_count() @nogc nothrow;
+    extern(C) extern void* _dyld_get_image_header(uint) @nogc nothrow;
+    extern(C) extern const(char)* _dyld_get_image_name(uint) @nogc nothrow;
+
     enum uint
         MH_MAGIC_64 = 0xfeedfacf,
         MH_CIGAM_64 = 0xcffaedfe,

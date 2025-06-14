@@ -322,26 +322,26 @@ string _nu_strz(const(char)* str) @nogc nothrow {
 
 extern(D)
 uint _nu_ntoh(uint val) {
-    ubyte* bval = cast(ubyte*)cast(ulong*)&val;
+    ubyte* bval = cast(ubyte*)cast(uint*)&val;
     return 
-        (bval[0] << 24) |
-        (bval[1] << 16) |
-        (bval[2] << 8 ) |
-        (bval[3] << 0 );
+        (cast(uint)bval[0] << 24) |
+        (cast(uint)bval[1] << 16) |
+        (cast(uint)bval[2] << 8 ) |
+        (cast(uint)bval[3] << 0 );
 }
 
 extern(D)
 ulong _nu_ntoh(ulong val) {
     ubyte* bval = cast(ubyte*)cast(ulong*)&val;
     return 
-        (bval[0] << 56) |
-        (bval[1] << 48) |
-        (bval[2] << 40) |
-        (bval[3] << 32) |
-        (bval[4] << 24) |
-        (bval[5] << 16) |
-        (bval[6] << 8 ) |
-        (bval[7] << 0 );
+        (cast(ulong)bval[0] << 56) |
+        (cast(ulong)bval[1] << 48) |
+        (cast(ulong)bval[2] << 40) |
+        (cast(ulong)bval[3] << 32) |
+        (cast(ulong)bval[4] << 24) |
+        (cast(ulong)bval[5] << 16) |
+        (cast(ulong)bval[6] << 8 ) |
+        (cast(ulong)bval[7] << 0 );
 }
 
 

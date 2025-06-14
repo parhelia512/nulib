@@ -1,5 +1,7 @@
 name "appleos"
 
+dependency "numem" version=">=1.1.4"
+
 configuration "lib" {
     platforms "osx" "ios" "watchos" "tvos" "visionos"
     targetType "library"

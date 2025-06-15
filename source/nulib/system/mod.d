@@ -258,14 +258,16 @@ import core.attribute : weak;
 
     See: https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Concepts/FrameworkAnatomy.html
 */
-pragma(LDC_extern_weak)
-extern string _nu_module_transform_path(string path) @weak @nogc nothrow;
+string _nu_module_transform_path(string path) @weak @nogc nothrow {
+    return null;
+}
 
 /**
     Optional helper that defines whether paths are in UTF-16 format.
 */
-pragma(LDC_extern_weak)
-bool _nu_module_utf16_paths() @weak @nogc nothrow;
+bool _nu_module_utf16_paths() @weak @nogc nothrow {
+    return false;
+}
 
 /*
     Function which loads a module from the given path.
@@ -273,8 +275,9 @@ bool _nu_module_utf16_paths() @weak @nogc nothrow;
     This is implemented by backends to abstract away the OS intricaices
     of loading modules and finding symbols within.
 */
-pragma(LDC_extern_weak)
-void* _nu_module_open(void* path) @weak @nogc nothrow;
+void* _nu_module_open(void* path) @weak @nogc nothrow {
+    return null;
+}
 
 /*
     Function which loads a module from the given path.
@@ -282,8 +285,9 @@ void* _nu_module_open(void* path) @weak @nogc nothrow;
     This is implemented by backends to abstract away the OS intricaices
     of loading modules and finding symbols within.
 */
-pragma(LDC_extern_weak)
-void _nu_module_close(void* module_) @weak @nogc nothrow;
+void _nu_module_close(void* module_) @weak @nogc nothrow {
+    return;
+}
 
 /*
     Function which finds a symbol within a given module
@@ -291,8 +295,9 @@ void _nu_module_close(void* module_) @weak @nogc nothrow;
     This is implemented by backends to abstract away the OS intricaices
     of loading modules and finding symbols within.
 */
-pragma(LDC_extern_weak)
-void* _nu_module_get_symbol(void* module_, const(char)* symbol) @weak @nogc nothrow;
+void* _nu_module_get_symbol(void* module_, const(char)* symbol) @weak @nogc nothrow {
+    return null;
+}
 
 /*
     Function which gets the "base address" of the module.
@@ -301,8 +306,9 @@ void* _nu_module_get_symbol(void* module_, const(char)* symbol) @weak @nogc noth
     $(D _nu_module_enumerate_sections) and $(D _nu_module_enumerate_symbols)
     to function.
 */
-pragma(LDC_extern_weak)
-void* _nu_module_get_base_address(void* module_) @weak @nogc nothrow;
+void* _nu_module_get_base_address(void* module_) @weak @nogc nothrow {
+    return null;
+}
 
 /*
     Function which releases the "base address" of the module.
@@ -311,17 +317,20 @@ void* _nu_module_get_base_address(void* module_) @weak @nogc nothrow;
     $(D _nu_module_enumerate_sections) and $(D _nu_module_enumerate_symbols)
     to function.
 */
-pragma(LDC_extern_weak)
-void _nu_module_release_base_address(void* module_) @weak @nogc nothrow;
+void _nu_module_release_base_address(void* module_) @weak @nogc nothrow {
+    return;
+}
 
 /*
     Function which enumerates all of the sections within a module.
 */
-pragma(LDC_extern_weak)
-SectionInfo[] _nu_module_enumerate_sections(void* base) @weak @nogc nothrow;
+SectionInfo[] _nu_module_enumerate_sections(void* base) @weak @nogc nothrow {
+    return null;
+}
 
 /*
     Function which enumerates all of the exported symbols.
 */
-pragma(LDC_extern_weak)
-Symbol[] _nu_module_enumerate_symbols(void* base) @weak @nogc nothrow;
+Symbol[] _nu_module_enumerate_symbols(void* base) @weak @nogc nothrow {
+    return null;
+}

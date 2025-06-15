@@ -374,14 +374,7 @@ version(Darwin) {
     }
     
 } else {
-
-    SectionInfo[] _nu_module_enumerate_sections(void* base) @nogc nothrow {
-        return null;
-    }
-
-    Symbol[] _nu_module_enumerate_symbols(void* base) @nogc nothrow {
-        return null;
-    }
+    
 }
 
 

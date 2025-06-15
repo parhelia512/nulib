@@ -256,8 +256,20 @@ public:
     */
     this(U)(inout(U)[] rhs) @system if (isSomeChar!U) {
         if (rhs) {
-            auto dec = decode(rhs, true);
-            this = encode!(SelfType)(dec, true);
+            static if (is(Unqual!U == Unqual!T)) {
+
+                // Skip transformation if they're pratically the same.
+                this.memory = cast(MemoryT)rhs.nu_dup();
+            } else {
+
+                // Otherwise we need to do unicode conversion.
+                auto dec = decode(rhs, false);
+                auto enc = encode!(SelfType)(dec, false);
+
+                // We want the null terminator, so use this ugly pointer
+                // arithmetic. We know enc will always have it anyways.
+                this.memory = cast(MemoryT)enc.ptr[0..enc.realLength].nu_dup();
+            }
         } else {
             nogc_zeroinit(this.memory);
         }

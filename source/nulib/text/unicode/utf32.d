@@ -157,6 +157,6 @@ ndstring encode(UnicodeSlice slice, bool addBOM = false) {
     UTF-32 this doesn't do much other than
     throw the data into a nwstring.
 */
-ndstring encode(UnicodeSequence seq, bool addBOM = false) {
+ndstring encode(ref UnicodeSequence seq, bool addBOM = false) {
     return encode(seq[0..$], addBOM);
 }

@@ -339,7 +339,7 @@ nwstring encode(UnicodeSlice slice, bool addBOM = false) {
 /**
     Encodes a series of unicode codepoints to UTF-16
 */
-nwstring encode(UnicodeSequence sequence, bool addBOM = false) {
+nwstring encode(ref UnicodeSequence sequence, bool addBOM = false) {
     return encode(sequence[0..$], addBOM);
 }
 

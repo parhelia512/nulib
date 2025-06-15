@@ -367,7 +367,7 @@ nstring encode(UnicodeSlice slice) {
 /**
     Encodes a series of unicode codepoints to UTF-8
 */
-nstring encode(UnicodeSequence sequence) {
+nstring encode(ref UnicodeSequence sequence) {
     return encode(sequence[0..$]);
 }
 

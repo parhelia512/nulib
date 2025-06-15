@@ -37,6 +37,23 @@ private:
         this.symbols_ = symbols_.nu_resize(0);
     }
 
+    // Converts UTF8 path to a native path.
+    void* getNativePath(string path) {
+        if (!path)
+            return null;
+
+        if (_nu_module_utf16_paths()) {
+            
+            nwstring tmp = path;
+            const(wchar)[] utf16 = tmp.ptr[0..tmp.realLength].nu_dup();
+            return cast(void*)utf16.ptr;
+        }
+
+        nstring tmp = path;
+        const(char)[] utf8 = tmp.ptr[0..tmp.realLength].nu_dup();
+        return cast(void*)utf8.ptr;
+    }
+
 public:
 
     /**
@@ -119,18 +136,12 @@ public:
         Params:
             path = Path to a module.
     */
-    this(string path) { 
-        if (!path) {
-            this.handle = cast(Handle)_nu_module_open(null);
-        } else if (_nu_module_utf16_paths()) {
-            nwstring wpath = path;
-            this.handle = cast(Handle)_nu_module_open(cast(void*)wpath.ptr);
-        } else {
-            nstring wpath = path;
-            this.handle = cast(Handle)_nu_module_open(cast(void*)wpath.ptr);
-        }
-
+    this(string path) {
+        void* rpath = getNativePath(path);
+        this.handle = cast(Handle)_nu_module_open(rpath);
         this.baseaddr = _nu_module_get_base_address(handle);
+        
+        if (rpath) nu_free(rpath);
     }
 
     /**
@@ -177,6 +188,33 @@ public:
                 rsymbols ~= syms[i];
         
         return rsymbols;
+    }
+
+    /**
+        Finds a section within the module, and optionally limits the
+        search to be within a specific segment, if applicable.
+
+        Params:
+            section = The section to find
+            segment = The segment to find it in, or $(D null).
+        
+        Returns:
+            A reference to a section info object describing the section, 
+            owned by the module, or $(D null) if not found.
+    */
+    final
+    SectionInfo* findSection(string section, string segment = null) {
+        SectionInfo[] sects = sections;
+        foreach(i; 0..sects.length) {
+            if (sects[i].section == section) {
+                if (segment && sects[i].segment != segment)
+                    continue;
+                
+                return &sects[i];
+            }
+        }
+        
+        return null;
     }
 
     /**
@@ -259,7 +297,7 @@ import core.attribute : weak;
     See: https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Concepts/FrameworkAnatomy.html
 */
 string _nu_module_transform_path(string path) @weak @nogc nothrow {
-    return null;
+    return path;
 }
 
 /**

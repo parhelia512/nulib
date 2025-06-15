@@ -83,6 +83,7 @@ void* _nu_module_open(void* path) @nogc nothrow {
     //          We want UNIX semantics here because they're nice.
     if (!path)
         return GetModuleHandleW(null);
+    
     return LoadLibraryW(cast(const(wchar)*)path);
 }
 
@@ -227,6 +228,7 @@ Symbol[] _nu_module_enumerate_symbols(void* base) @nogc nothrow {
 //
 
 void* _nu_module_win32_verify_pe(void* base) @nogc nothrow {
+    if (!base) return null;
     ushort magic = *cast(ushort*) base;
 
     // 'MZ' DOS Header

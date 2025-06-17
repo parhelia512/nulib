@@ -147,10 +147,19 @@ private:
     
     // Backing slice of the string.
     immutable(T)[] memory = null;
+    size_t flags;
+
+    /**
+        Flag which indicates that the string is read-only.
+    */
+    enum size_t STRFLAG_READONLY = 0x01;
 
     // Resizing algorithm
     pragma(inline, true)
     void resizeImpl(size_t newLength) @trusted {
+        if (flags & STRFLAG_READONLY)
+            this.takeOwnershipImpl();
+
         if (newLength == 0) {
             if (memory.ptr !is null)
                 memory.nu_resize(0);
@@ -178,6 +187,15 @@ private:
     void setCharImpl(void* at, T c) {
         if (memory)
             *(cast(T*)at) = c;
+    }
+
+    // Takes ownership of string.
+    pragma(inline, true)
+    void takeOwnershipImpl() {
+        if (flags & STRFLAG_READONLY) {
+            this.memory = memory.nu_idup();
+            this.flags &= ~STRFLAG_READONLY;
+        }
     }
 
 public:
@@ -232,6 +250,7 @@ public:
     this(inout(T)[] rhs) @system {
         if (__ctfe) {
             this.memory = cast(immutable(T)[])rhs;
+            this.flags |= STRFLAG_READONLY;
         } else if (rhs) {
             this.memory = cast(immutable(T)[])rhs.nu_idup;
             nu_terminate(this.memory);
@@ -280,6 +299,7 @@ public:
     */
     this(ref return scope inout(SelfType) rhs) @trusted {
         if (__ctfe) {
+            this.flags |= STRFLAG_READONLY;
             this.memory = rhs.memory;
         } else if (rhs) {
             this.memory = rhs.memory.nu_idup;
@@ -335,6 +355,29 @@ public:
     */
     void resize(size_t newLength) {
         this.resizeImpl(newLength);
+    }
+
+    /**
+        Sets the value of the string.
+
+        Params:
+            other = The string to set this string to.
+
+        Notes:
+            This function will directly replace the internal store,
+            as such, you are responsible for freeing prior memory
+            where relevant.
+    */
+    void opAssign(inout(T)[] other) @trusted {
+        if (!(flags & STRFLAG_READONLY)) 
+            nu_free(cast(void*)this.memory.ptr);
+        
+        this.memory = other.nu_idup();
+        nu_terminate(this.memory);
+
+        // Take ownership of our new memory.
+        if (flags & STRFLAG_READONLY) 
+            flags &= ~STRFLAG_READONLY;
     }
 
     /**

@@ -247,7 +247,8 @@ public:
     /**
         Creates an nstring
     */
-    this(inout(T)[] rhs) @system {
+    this(U)(immutable(U)[] rhs) @system
+    if (is(immutable(U)[] == immutable(T)[])) {
         if (__ctfe) {
             this.memory = cast(immutable(T)[])rhs;
             this.flags |= STRFLAG_READONLY;
@@ -262,7 +263,8 @@ public:
     /**
         Creates a string from a null-terminated C string.
     */
-    this(const(T)* rhs) @system {
+    this(U)(const(U)* rhs) @system
+    if (is(U == T)) {
         if (rhs) {
             this.memory = fromStringz(rhs).nu_idup;
         } else {
@@ -273,7 +275,8 @@ public:
     /**
         Creates a string from a string from any other UTF encoding.
     */
-    this(U)(inout(U)[] rhs) @system if (isSomeChar!U) {
+    this(U)(auto ref inout(U)[] rhs) @system
+    if (isSomeChar!U) {
         if (rhs) {
             static if (is(Unqual!U == Unqual!T)) {
 
@@ -297,14 +300,14 @@ public:
     /**
         Copy-constructor
     */
-    this(ref return scope inout(SelfType) rhs) @trusted {
+    this(ref return scope inout(SelfType) rhs) inout @trusted {
         if (__ctfe) {
             this.flags |= STRFLAG_READONLY;
             this.memory = rhs.memory;
         } else if (rhs) {
             this.memory = rhs.memory.nu_idup;
         } else {
-            nogc_zeroinit(this.memory);
+            nogc_zeroinit(cast(T[])this.memory);
         }
     }
 

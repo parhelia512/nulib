@@ -11,8 +11,8 @@
 module nulib.conv;
 import nulib.c.stdlib;
 import nulib.c.stdio;
-import nulib.c.math;
 import nulib.string;
+import nulib.math;
 import nulib.text.ascii;
 import numem.core.traits;
 import numem.core.hooks;
@@ -33,9 +33,11 @@ import numem.core.exception;
         The integral value on success, or $(D 0) on failure.
 */
 T to_integral(T)(inout(char)[] str, int base = 10) @nogc nothrow if (__traits(isIntegral, T)) {
-    nstring tmp = str;
+    if (str.length == 0)
+        return T.init;
+    
+    auto tmp = _tmpbuffer!8(str);
     ulong out_;
-
     switch(base) {
         case 8:
             cast(void)sscanf(tmp.ptr, "%llo", &out_);
@@ -48,7 +50,7 @@ T to_integral(T)(inout(char)[] str, int base = 10) @nogc nothrow if (__traits(is
                 return cast(T)atoll(tmp.ptr);
 
         case 16:
-            cast(void)sscanf(tmp.ptr, "%llx", &out_);
+            cast(void)sscanf(tmp.ptr, "%8llx", &out_);
             return cast(T)out_;
 
         default:
@@ -69,7 +71,8 @@ alias toInt = to_integral;
         The floating point value on success, or $(D 0.0) on failure.
 */
 T to_floating(T)(inout(char)[] str) @nogc nothrow if (__traits(isFloating, T)) {
-    return cast(T)atof(str);
+    auto tmp = _tmpbuffer!32(str);
+    return cast(T)atof(tmp.ptr);
 }
 
 /// ditto
@@ -182,4 +185,14 @@ nstring to_string_impl(T...)(const(char)* fmtstring, T input) @nogc {
     }
 
     return nstring.init;
+}
+
+/**
+    Creates a temporary buffer of the specified length.
+*/
+char[len] _tmpbuffer(uint len)(inout(char)[] str) return {
+    size_t tbOffset = min(8, str.length);
+    char[len] tmp = 0;
+    tmp[0..tbOffset] = str[0..tbOffset];
+    return tmp;
 }

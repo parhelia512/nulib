@@ -31,25 +31,19 @@ template CTUUID(string uuid) {
             if (!UUID.validate(slice))
                 return uuid;
 
+            // Get from string
             uuid.time_low = slice[0..8].to!uint(16);
-            slice = slice[9..$];
+            uuid.time_mid = slice[9..13].to!ushort(16);
+            uuid.time_hi_and_version = slice[14..18].to!ushort(16);
+            uuid.clk_seq = slice[19..23].to!ushort(16);
 
-            uuid.time_mid = slice[0..4].to!ushort(16);
-            slice = slice[5..$];
-
-            uuid.time_hi_and_version = slice[0..4].to!ushort(16);
-            slice = slice[5..$];
-
-            ubyte clk0 = slice[0..2].to!ubyte(16);
-            ubyte clk1 = slice[2..4].to!ubyte(16);
-
-            uuid.clk_seq = cast(ushort)(clk1 << 8 | clk0);
-            slice = slice[5..$];
-
-            static foreach(i; 0..6) {
-                uuid.node[i] = slice[0..2].to!ubyte(16);
-                slice = slice[2..$];
+            // Get bytes
+            foreach(i; 0..node.length) {
+                uuid.node[i] = slice[24+(i*2)..24+(i*2)+2].to!ubyte(16);
             }
+
+            // Flip clk_seq if need be.
+            uuid.handleMsFormat();
         }
         return uuid;
     }
@@ -65,7 +59,17 @@ struct UUID {
 private:
     enum VERSION_BITMASK = 0b11110000_00000000;
 
-    enum VARIANT_BITMASK = 0b11100000_00000000;
+    // NCS Variant Bits
+    enum V_NCS_BITMASK = 0b11000000_00000000;
+    enum V_NCS_BITS = 0b10000000_00000000;
+
+    // RFC Variant Bits
+    enum V_RFC_BITMASK = 0b11100000_00000000;
+    enum V_RFC_BITS = 0b11000000_00000000;
+
+    // Microsoft Variant Bits
+    enum V_MSF_BITMASK = 0b11100000_00000000;
+    enum V_MSF_BITS = 0b11100000_00000000;
 
     union {
         struct {
@@ -81,6 +85,16 @@ private:
     
     this(ulong[2] data) inout {
         this.ldata = data;
+    }
+
+    // Helper that swaps bytes in MS format.
+    void handleMsFormat() {
+        if ((clk_seq & V_MSF_BITMASK) == V_MSF_BITS) {
+            ushort old_seq = clk_seq;
+            this.clk_seq = 
+                (old_seq >> 8) | 
+                ((old_seq & 0xFF) << 8);
+        }
     }
 
 public:
@@ -120,17 +134,12 @@ public:
         The variant of the UUID structure
     */
     @property UUIDVariant uuidVariant() {
-        enum ncsMask = 0b00000100;
-        enum rfcMask = 0b00000110;
-        enum msMask = 0b00000110;
-        ubyte variant = cast(ubyte)(clk_seq >> 13);
-        
-        if ((variant & ncsMask) == 0) 
-            return UUIDVariant.ncs;
-        if ((variant & rfcMask) == 4) 
-            return UUIDVariant.rfc4122;
-        if ((variant & msMask) == 6) 
+        if ((clk_seq & V_MSF_BITMASK) == V_MSF_BITS) 
             return UUIDVariant.microsoft;
+        if ((clk_seq & V_RFC_BITMASK) == V_RFC_BITS) 
+            return UUIDVariant.rfc4122;
+        if ((clk_seq & V_NCS_BITMASK) == V_NCS_BITS) 
+            return UUIDVariant.ncs;
         
         return UUIDVariant.reserved;
     }
@@ -155,13 +164,15 @@ public:
         this.time_low = time_low;
         this.time_mid = time_mid;
         this.time_hi_and_version = time_hi_and_version;
-        this.clk_seq = cast(ushort)(clk1 << 8 | clk0);
+        this.clk_seq = clk0 << 8 | clk1;
         this.node[0] = d0;
         this.node[1] = d1;
         this.node[2] = d2;
         this.node[3] = d3;
         this.node[4] = d4;
         this.node[5] = d5;
+
+        this.handleMsFormat();
     }   
 
     /**
@@ -243,22 +254,17 @@ public:
 
         // Get from string
         uuid.time_low = slice[0..8].toInt!uint(16);
-        slice = slice[9..$];
-
-        uuid.time_mid = slice[0..4].toInt!ushort(16);
-        slice = slice[5..$];
-
-        uuid.time_hi_and_version = slice[0..4].toInt!ushort(16);
-        slice = slice[5..$];
-
-        uuid.clk_seq = slice[0..4].toInt!ushort(16);
-        slice = slice[5..$];
+        uuid.time_mid = slice[9..13].toInt!ushort(16);
+        uuid.time_hi_and_version = slice[14..18].toInt!ushort(16);
+        uuid.clk_seq = slice[19..23].toInt!ushort(16);
 
         // Get bytes
-        static foreach(i; 0..6) {
-            uuid.node[i] = slice[0..2].toInt!ubyte(16);
-            slice = slice[2..$];
+        foreach(i; 0..6) {
+            size_t start = 24+(i*2);
+            uuid.node[i] = slice[start..start+2].toInt!ubyte(16);
         }
+        
+        uuid.handleMsFormat();
         return uuid;
     }
 
@@ -279,23 +285,25 @@ public:
         Returns UUID string
     */
     nstring toString() {
-        nstring str = "00000000-0000-0000-0000-000000000000";
-        char* cstr = cast(char*)str.ptr;
+        import nulib.c.stdio : snprintf;
 
-        // Add hex data
-        cstr[0..8] = time_low.toHexString(true)[0..8];
-        cstr[9..13] = time_mid.toHexString(true)[0..4];
-        cstr[14..18] = time_hi_and_version.toHexString(true)[0..4];
-        cstr[19..23] = clk_seq.toHexString(true)[0..4];
-
-        cstr += 24;
-
-        static foreach(i; 0..6) {
-            cstr[0..2] = node[i].toHexString(true)[0..2];
-            cstr += 2;
-        }
-
-        return str;
+        char[uuidStringLength+1] buffer;
+        snprintf(
+            cast(char*)buffer.ptr,
+            buffer.length,
+            "%0.8lx-%0.4hx-%0.4hx-%0.4hx-%.2hhx%.2hhx%.2hhx%.2hhx%.2hhx%.2hhx", 
+            time_low, 
+            time_mid, 
+            time_hi_and_version,
+            clk_seq,
+            node[0],
+            node[1],
+            node[2],
+            node[3],
+            node[4],
+            node[5],
+        );
+        return nstring(cast(string)buffer[0..uuidStringLength]);
     }
 
     /**
@@ -323,7 +331,7 @@ public:
             return this.time_hi_and_version < other.time_hi_and_version;
         
         // Then check all the nodes
-        static foreach(i; 0..6) {
+        static foreach(i; 0..node.length) {
             if (this.node[i] < other.node[i]) return -1;
             if (this.node[i] > other.node[i]) return 1;
         }
@@ -342,6 +350,13 @@ unittest {
         "7f204bc7-53fe-4ffb-acaf-3f0cd0cf69cb"
     ];
 
+    const UUIDVariant[4] variants = [
+        UUIDVariant.ncs,
+        UUIDVariant.ncs,
+        UUIDVariant.ncs,
+        UUIDVariant.ncs,
+    ];
+
     const int[4] versions = [
         1,
         4,
@@ -355,8 +370,8 @@ unittest {
         UUID uuid = UUID.parse(tests[i]);
 
         assert(
-            uuid.uuidVariant == UUIDVariant.rfc4122,
-            "Expected RFC4122, got %s".format(uuid.uuidVariant.text)
+            uuid.uuidVariant == variants[i],
+            "Expected %s, got %s".format(variants[i], uuid.uuidVariant)
         );
 
         assert(
@@ -378,9 +393,11 @@ unittest {
 
 @("uuid: toString")
 unittest {
+    import std.format : format;
+
     UUID uuid1 = UUID.parse("ce1a553c-762d-11ef-b864-0242ac120002");
     nstring str = uuid1.toString();
-    assert(str == "ce1a553c-762d-11ef-b864-0242ac120002", str);
+    assert(str == "ce1a553c-762d-11ef-b864-0242ac120002", "Expected %s, got %s".format("ce1a553c-762d-11ef-b864-0242ac120002", str[]));
 }
 
 @("uuid: generation")

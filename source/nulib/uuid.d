@@ -38,7 +38,7 @@ template CTUUID(string uuid) {
             uuid.clk_seq = slice[19..23].to!ushort(16);
 
             // Get bytes
-            foreach(i; 0..node.length) {
+            foreach(i; 0..UUID.node.length) {
                 uuid.node[i] = slice[24+(i*2)..24+(i*2)+2].to!ubyte(16);
             }
 

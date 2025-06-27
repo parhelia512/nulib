@@ -21,8 +21,9 @@ enum UUIDVariant {
 
     Params:
         uuid = The UUID string to generate a UUID object from.
+        forceMS = Whether to force the microsoft format.
 */
-template CTUUID(string uuid) {
+template CTUUID(string uuid, bool forceMS = false) {
     UUID genUUID(string slice) {
         import std.conv : to;
 
@@ -43,7 +44,7 @@ template CTUUID(string uuid) {
             }
 
             // Flip clk_seq if need be.
-            uuid.handleMsFormat();
+            uuid.handleMsFormat(forceMS);
         }
         return uuid;
     }
@@ -88,8 +89,8 @@ private:
     }
 
     // Helper that swaps bytes in MS format.
-    void handleMsFormat() {
-        if ((clk_seq & V_MSF_BITMASK) == V_MSF_BITS) {
+    void handleMsFormat(bool force = false) {
+        if ((clk_seq & V_MSF_BITMASK) == V_MSF_BITS || force) {
             ushort old_seq = clk_seq;
             this.clk_seq = 
                 (old_seq >> 8) | 

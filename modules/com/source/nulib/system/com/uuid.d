@@ -11,13 +11,13 @@ alias uuid_t = UUID; /// ditto
 /**
     A Compile-Time Globally Unique Identifier.
 */
-enum Guid(string guid) = nuuuid.CTUUID!(guid);
+enum Guid(string guid) = nuuuid.CTUUID!(guid, true);
 
 /**
     A Globally Unique Identifier.
 */
 enum Guid(uint time_low, ushort time_mid, ushort time_hi_and_version, ubyte clk0, ubyte clk1, ubyte d0, ubyte d1, ubyte d2, ubyte d3, ubyte d4, ubyte d5) = 
-    nuuuid.UUID(time_low, time_mid, time_hi_and_version, clk0, clk1, d0, d1, d2, d3, d4, d5);
+    nuuuid.UUID(time_low, time_mid, time_hi_and_version, clk1, clk0, d0, d1, d2, d3, d4, d5);
 
 /**
     Globally unique identifier.

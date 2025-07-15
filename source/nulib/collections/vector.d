@@ -149,6 +149,42 @@ public:
     }
 
     /**
+        Take ownership of the memory owned by the vector.
+
+        Returns:
+            The memory which was owned by the vector,
+            the vector is reset in the process.
+    */
+    T[] take() {
+        return memory.take();
+    }
+
+    /**
+        Flips the endianness of the vector's contents.
+
+        Note:
+            This is no-op for 8-bit elements.
+
+        Returns:
+            The vector instance.
+    */
+    auto ref flipEndian() {
+        memory.flipEndian();
+        return this;
+    }
+
+    /**
+        Reverses the contents of the vector
+
+        Returns:
+            The vector instance.
+    */
+    auto ref reverse() {
+        memory.reverse();
+        return this;
+    }
+
+    /**
         Clears the vector, removing all elements from it.
     */
     void clear() @safe {
@@ -160,16 +196,19 @@ public:
 
         Reserve can *only* grow the allocation; not shrink it.
     */
-    void reserve(size_t newSize) {
+    auto ref reserve(size_t newSize) {
         if (newSize > memory.capacity)
             memory.reserve(newSize);
+        
+        return this;
     }
 
     /**
         Resizes the vector.
     */
-    void resize(size_t newSize) {
+    auto ref resize(size_t newSize) {
         memory.resize(newSize);
+        return this;
     }
 
     /**
@@ -343,6 +382,24 @@ unittest {
     foreach(ref str; strs) {
         assert(str == "Hello, world!");
     }
+}
+
+@(".reverse()")
+unittest {
+    vector!int numbers = [1, 2, 3, 4];
+    assert(numbers.reverse() == [4, 3, 2, 1]);
+}
+
+@(".flipEndian()")
+unittest {
+    vector!ushort numbers = [0xFF00, 0x00FF];
+    assert(numbers.flipEndian() == [0x00FF, 0xFF00]);
+}
+
+@(".flipEndian().reverse()")
+unittest {
+    vector!ushort numbers = [0xFF00, 0x0FF0, 0x00FF];
+    assert(numbers.flipEndian().reverse() == [0xFF00, 0xF00F, 0x00FF]);
 }
 
 @(".removeAt(index)")

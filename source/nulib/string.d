@@ -198,6 +198,13 @@ private:
         }
     }
 
+    // Resets the string.
+    pragma(inline, true)
+    void resetImpl() {
+        this.memory = null;
+        this.flags = 0;
+    }
+
 public:
     alias value this;
 
@@ -338,11 +345,59 @@ public:
     }
 
     /**
-        Reverses the contents of the string
+        Flips the endianness of the string's contents.
+
+        Note:
+            This is no-op for UTF-8 strings.
+
+        Returns:
+            The string instance.
     */
-    void reverse() {
-        import nulib.memory.endian : nu_etoh, ALT_ENDIAN;
-        cast(void)nu_etoh!(T, ALT_ENDIAN)(cast(T[])memory);
+    auto ref flipEndian() {
+        static if (CharType.sizeof > 1) {
+
+            import nulib.memory.endian : nu_etoh, ALT_ENDIAN;
+            cast(void)nu_etoh!(CharType, ALT_ENDIAN)(cast(CharType[])memory[0..$]);
+        }
+
+        return this;
+    }
+
+    /**
+        Reverses the contents of the string
+
+        Returns:
+            The string instance.
+    */
+    auto ref reverse() {
+        auto mmemory = cast(CharType[])memory;
+        foreach(i; 0..memory.length/2) {
+            auto a = memory[i];
+            auto b = memory[$-(i+1)];
+
+            mmemory[i] = b;
+            mmemory[$-(i+1)] = a;
+        }
+
+        return this;
+    }
+
+    /**
+        Take ownership of the memory owned by the string.
+
+        If the string is tagged as read-only a copy of the string
+        is returned.
+
+        Returns:
+            The memory which was owned by the nulib string,
+            the nulib string is reset in the process.
+    */
+    immutable(T)[] take() {
+        this.takeOwnershipImpl();
+        
+        auto mem = this.memory;
+        this.resetImpl();
+        return mem;
     }
 
     /**
@@ -455,6 +510,18 @@ unittest {
     ndstring wd;
     wd ~= cstr3;
     assert(wd == "ho"d);
+}
+
+@("nstring: reverse")
+unittest {
+    nstring str = "Test";
+    assert(str.reverse() == "tseT");
+}
+
+@("nstring: flipEndian")
+unittest {
+    nwstring str = "Test"w;
+    assert(str.flipEndian() == "\u5400\u6500\u7300\u7400"); // "Test" UTF-16 code points, but endian flipped.
 }
 
 @("nstring: string in map")

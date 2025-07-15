@@ -132,6 +132,14 @@ struct ManagedArray(T, bool ownsMemory = true) {
         }
     }
 
+    // Take ownership of memory store.
+    pragma(inline, true)
+    T[] take() {
+        auto mem = memory;
+        this.memory = null;
+        return mem;
+    }
+
     // Reverses the contents of the array
     pragma(inline, true)
     void reverse() {
@@ -139,28 +147,26 @@ struct ManagedArray(T, bool ownsMemory = true) {
 
         if (memory.length == 0)
             return;
-
-        U tmp;
+        
+        auto mmemory = cast(U)memory;
         foreach(i; 0..memory.length/2) {
-            size_t lhs = i;
-            size_t rhs = memory.length-i;
+            auto a = memory[i];
+            auto b = memory[$-(i+1)];
 
-            tmp = (cast(U[])memory)[lhs];
-            (cast(U[])memory)[lhs] = (cast(U[])memory)[rhs];
-            (cast(U[])memory)[rhs] = tmp;
+            mmemory[i] = b;
+            mmemory[$-(i+1)] = a;
         }
     }
 
     // Flips the endianness of the elements within the array.
     pragma(inline, true)
     void flipEndian() {
-        alias U = Unconst!(T)[];
+        alias U = Unconst!(T);
 
         static if (T.sizeof > 1) {
+            
             import nulib.memory.endian : nu_etoh, ALT_ENDIAN;
-
-            U[] ucMemory = cast(U[])memory;
-            cast(void)nu_etoh!(U[], ALT_ENDIAN)(ucMemory);
+            cast(void)nu_etoh!(U, ALT_ENDIAN)(cast(U[])memory[0..$]);
         }
     }
 }

@@ -162,11 +162,12 @@ struct ManagedArray(T, bool ownsMemory = true) {
     pragma(inline, true)
     void flipEndian() {
         alias U = Unconst!(T);
+        alias UX = ubyte[U.sizeof];
 
-        static if (T.sizeof > 1) {
+        static if (U.sizeof > 1) {
             
             import nulib.memory.endian : nu_etoh, ALT_ENDIAN;
-            cast(void)nu_etoh!(U, ALT_ENDIAN)(cast(U[])memory[0..$]);
+            cast(void)nu_etoh!(UX, ALT_ENDIAN)(cast(UX[])memory[0..$]);
         }
     }
 }

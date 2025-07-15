@@ -48,19 +48,16 @@ enum Endianess NETWORK_ORDER = Endianess.bigEndian;
         The input with the byte order reversed.
 */
 T nu_flip_bytes(T)(T in_) @system @nogc nothrow {
-    union _tmp_container {
-        T value;
-        ubyte[T.sizeof] bytes;
-    }
+    ubyte swapTmp; // temp byte for swapping.
 
-    ubyte swapTmp; // temporar byte for swapping.
-    _tmp_container tmp = _tmp_container(in_);
+    ubyte[T.sizeof] bytes = *(cast(ubyte[T.sizeof]*)&in_);
     static foreach(i; 0..T.sizeof/2) {
-        swapTmp = tmp.bytes[i];
-        tmp.bytes[i] = tmp.bytes[($-1)-i];
-        tmp.bytes[($-1)-i] = swapTmp;
+        
+        swapTmp = bytes[i];
+        bytes[i] = bytes[$-(i+1)];
+        bytes[$-(i+1)] = swapTmp;
     }
-    return tmp.value;
+    return *(cast(T*)&bytes);
 }
 
 /**

@@ -441,3 +441,17 @@ unittest {
     numbers.insert([255, 255, 255], 2);
     assert(numbers == [0, 1, 255, 255, 255, 2, 3, 4]);
 }
+
+@(".flipEndian() nothrow struct")
+unittest {
+    static
+    struct Test {
+        ulong a;
+        ~this() @nogc nothrow { }
+    }
+
+    Test testA = Test(0xF00FF00FF00FF00F);
+    Test testB = Test(0x0FF00FF00FF00FF0);
+    vector!Test testStructs = [testA, testB];
+    assert(testStructs.flipEndian() == [testB, testA]);
+}

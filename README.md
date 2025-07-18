@@ -36,6 +36,7 @@ While third party or builtin support packages can provide more parts of function
 loading support, threads, etc.
 
 Currently the structure is split up as follows:
+
 | Directory  | Description                                                    |
 | ---------- | -------------------------------------------------------------- |
 | `source/`  | The main interface of the library                              |

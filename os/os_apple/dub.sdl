@@ -1,4 +1,4 @@
-name "appleos"
+name "os_apple"
 
 dependency "numem" version=">=1.1.4"
 

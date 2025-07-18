@@ -7,17 +7,17 @@ license "BSL-1.0"
 dependency "numem" version=">=1.2.0"
 dependency "nulib:stdc" version="*"
 
-dependency "nulib:win32" version="*"
-dependency "nulib:posix" version="*"
-dependency "nulib:appleos" version="*"
+dependency "nulib:os_win32" version="*"
+dependency "nulib:os_posix" version="*"
+dependency "nulib:os_apple" version="*"
 
 // Basic configuration
 targetPath "out/"
 
 // OS Integration
-subPackage "os/win32"
-subPackage "os/posix"
-subPackage "os/appleos"
+subPackage "os/os_win32"
+subPackage "os/os_posix"
+subPackage "os/os_apple"
 
 // Sub-packages
 subPackage "modules/com"

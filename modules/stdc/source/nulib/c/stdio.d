@@ -11,20 +11,12 @@
 module nulib.c.stdio;
 import numem.compiler;
 
-static if (!NU_COMPILER_STRICT_TYPES) {
-    
-    /**
-        Opaque File Handle
-    */
-    struct FILE;
-} else {
-    
-    // Fallback for compilers with strict types.
-    import drt = core.stdc.stdio;
-    alias FILE = drt.FILE;
-}
-
 extern(C) nothrow @nogc:
+
+/**
+    Opaque File Handle
+*/
+struct FILE;
 
 enum {
     /**

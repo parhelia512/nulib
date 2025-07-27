@@ -9,7 +9,7 @@ dependency "numem" version="*"
 
 configuration "library" {
     platforms "osx" "ios" "tvos" "watchos" "visionos"
-    targetType "library"
+    targetType "staticLibrary"
 }
 
 configuration "other_platforms" {

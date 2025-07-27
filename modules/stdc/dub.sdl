@@ -6,7 +6,7 @@ targetPath "out/"
 dependency "numem" version="*"
 
 configuration "library" {
-    targetType "library"
+    targetType "staticLibrary"
 }
 
 configuration "unittest" {

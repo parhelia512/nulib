@@ -2,7 +2,7 @@ name "os_posix"
 
 dependency "numem" version=">=1.1.4"
 
-configuration "lib" {
+configuration "library" {
     platforms "posix"
     targetType "staticLibrary"
 

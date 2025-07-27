@@ -149,6 +149,31 @@ nstring to_oct_string(T)(T value) if (__traits(isIntegral, T)) {
 /// ditto
 alias toOctalString = to_oct_string;
 
+
+
+/**
+    Parses a hexidecimal number from the source.
+
+    Params:
+        source = The source string
+    
+    Returns:
+        The number parsed from the source string.
+*/
+T parseHex(T, S)(auto ref S source) @nogc nothrow
+if (__traits(isIntegral, T)) {
+    enum maxRead = T.sizeof*2;
+    ulong result;
+    ubyte b;
+
+    foreach(i; 0..min(maxRead, source.length)) {
+        b = (source[i] & 0xF) + (source[i] >> 6) | ((source[i] >> 3) & 0x8);
+        result = (result << 4) | b;
+    }
+    return cast(T)result;
+}
+
+
 //
 //          IMPLEMENTATION DETAILS
 //

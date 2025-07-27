@@ -2,9 +2,9 @@ name "os_apple"
 
 dependency "numem" version=">=1.1.4"
 
-configuration "lib" {
+configuration "library" {
     platforms "osx" "ios" "watchos" "tvos" "visionos"
-    targetType "library"
+    targetType "staticLibrary"
 }
 
 configuration "none" {

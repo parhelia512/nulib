@@ -25,22 +25,21 @@ enum UUIDVariant {
 */
 template CTUUID(string uuid, bool forceMS = false) {
     UUID genUUID(string slice) {
-        import std.conv : to;
-
         UUID uuid;
+
         if (__ctfe) {
             if (!UUID.validate(slice))
                 return uuid;
 
             // Get from string
-            uuid.time_low = slice[0..8].to!uint(16);
-            uuid.time_mid = slice[9..13].to!ushort(16);
-            uuid.time_hi_and_version = slice[14..18].to!ushort(16);
-            uuid.clk_seq = slice[19..23].to!ushort(16);
+            uuid.time_low = parseHex!uint(slice[0..8]);
+            uuid.time_mid = parseHex!ushort(slice[9..13]);
+            uuid.time_hi_and_version = parseHex!ushort(slice[14..18]);
+            uuid.clk_seq = parseHex!ushort(slice[19..23]);
 
             // Get bytes
             foreach(i; 0..UUID.node.length) {
-                uuid.node[i] = slice[24+(i*2)..24+(i*2)+2].to!ubyte(16);
+                uuid.node[i] = parseHex!ubyte(slice[24+(i*2)..24+(i*2)+2]);
             }
 
             // Flip clk_seq if need be.

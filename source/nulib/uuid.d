@@ -303,7 +303,9 @@ public:
             node[4],
             node[5],
         );
-        return nstring(cast(string)buffer[0..uuidStringLength]);
+        
+        nstring ret = nstring(cast(string)buffer[0..uuidStringLength]);
+        return ret;
     }
 
     /**

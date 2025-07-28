@@ -118,7 +118,7 @@ public:
         if (this.canUpdate)
             return true;
         
-        return (flags & 3) != 0;
+        return (flags & 3) > 0;
     }
 
     /**
@@ -141,7 +141,7 @@ public:
         if (!handle)
             return false;
         
-        return (flags & 3) != 0;
+        return (flags & 3) > 0;
     }
 
     /**
@@ -326,13 +326,17 @@ public:
 private:
 
 StringImpl!(fchar_t) toSupportedEncoding(string str) @nogc {
-    import nulib.text.unicode : decode, encode;
-    import numem.core.memory : nu_dup, nu_resize;
+    static if (is (fchar_t == char)) {
+        return StringImpl!(fchar_t)(str);
+    } else {
+        import nulib.text.unicode : decode, encode;
+        import numem.core.memory : nu_dup, nu_resize;
 
-    auto tmp = str.nu_dup();
-    auto rstr = encode!(StringImpl!(fchar_t))(decode(tmp), false);
-    tmp = tmp.nu_resize(0);
-    return rstr;
+        auto tmp = str.nu_dup();
+        auto rstr = encode!(StringImpl!(fchar_t))(decode(tmp), false);
+        tmp = tmp.nu_resize(0);
+        return rstr;
+    }
 }
 
 

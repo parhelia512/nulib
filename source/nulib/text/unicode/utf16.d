@@ -269,9 +269,10 @@ UnicodeSequence decode(inout(wchar)[] str, bool stripBOM = false) {
 
         // Validate length, add FFFD if invalid.
         size_t clen = tmp[i].getLength();
-        if (clen >= i+tmp.length || clen == 0) {
+        if (i+clen > tmp.length || clen == 0) {
             code ~= unicodeReplacementCharacter;
             i++;
+            continue;
         }
 
         txt[0..clen] = tmp[i..i+clen];

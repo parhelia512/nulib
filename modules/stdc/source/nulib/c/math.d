@@ -10,7 +10,7 @@
 */
 module nulib.c.math;
 
-extern(C) nothrow @nogc pure:
+extern(C) nothrow @nogc pure @safe:
 
 /**
     Computes the absolute value for the given value.

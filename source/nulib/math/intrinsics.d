@@ -34,8 +34,15 @@ pragma(inline, true)
 T sqrt(T)(T x) if (__traits(isFloating, T)) {
     version(LDC) {
         return x < 0 ? T.nan : llvm_sqrt(x);
+    }  else version(GNU) {
+        static if (is(T == float))
+            return __builtin_sqrtf(x);
+        else static if (is(T == double))
+            return __builtin_sqrt(x);
+        else static if (is(T == real))
+            return __builtin_sqrtl(x);
     } else {
-        return cmath.sqrt(x);
+        return cast(T)cmath.sqrt(cast(double)x);
     }
 }
 
@@ -66,12 +73,7 @@ T sin(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_sinl(x);
     } else {
-        static if (is(T == float))
-            return cmath.sinf(x);
-        else static if (is(T == double))
-            return cmath.sin(x);
-        else static if (is(T == real))
-            return cmath.sinl(x);
+        return cast(T)cmath.sin(cast(double)x);
     }
 }
 
@@ -96,12 +98,7 @@ T cos(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_cosl(x);
     } else {
-        static if (is(T == float))
-            return cmath.cosf(x);
-        else static if (is(T == double))
-            return cmath.cos(x);
-        else static if (is(T == real))
-            return cmath.cosl(x);
+        return cast(T)cmath.cos(cast(double)x);
     }
 }
 
@@ -126,12 +123,7 @@ T tan(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_tanl(x);
     } else {
-        static if (is(T == float))
-            return cmath.tanf(x);
-        else static if (is(T == double))
-            return cmath.tan(x);
-        else static if (is(T == real))
-            return cmath.tanl(x);
+        return cast(T)cmath.tan(cast(double)x);
     }
 }
 
@@ -164,12 +156,7 @@ T asin(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_asinl(x);
     } else {
-        static if (is(T == float))
-            return cmath.asinf(x);
-        else static if (is(T == double))
-            return cmath.asin(x);
-        else static if (is(T == real))
-            return cmath.asinl(x);
+        return cast(T)cmath.asin(cast(double)x);
     }
 }
 
@@ -194,12 +181,7 @@ T acos(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_acosl(x);
     } else {
-        static if (is(T == float))
-            return cmath.acosf(x);
-        else static if (is(T == double))
-            return cmath.acos(x);
-        else static if (is(T == real))
-            return cmath.acosl(x);
+        return cast(T)cmath.acos(cast(double)x);
     }
 }
 
@@ -226,12 +208,7 @@ T atan(T)(T x) if (__traits(isFloating, T)) {
     } else version(DigitalMars) {
         return nmath.atan(x); 
     } else {
-        static if (is(T == float))
-            return cmath.atanf(x);
-        else static if (is(T == double))
-            return cmath.atan(x);
-        else static if (is(T == real))
-            return cmath.atanl(x);
+        return cast(T)cmath.atan(cast(double)x);
     }
 }
 
@@ -259,12 +236,7 @@ T atan2(T)(T y, T x) if (__traits(isFloating, T)) {
     } else version(DigitalMars) {
         return nmath.atan2(y, x); 
     } else {
-        static if (is(T == float))
-            return cmath.atan2f(y, x);
-        else static if (is(T == double))
-            return cmath.atan2(y, x);
-        else static if (is(T == real))
-            return cmath.atan2l(y, x);
+        return cast(T)cmath.atan2(cast(double)x, cast(double)y);
     }
 }
 
@@ -289,12 +261,7 @@ T sinh(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_sinhl(x);
     } else {
-        static if (is(T == float))
-            return cmath.sinhf(x);
-        else static if (is(T == double))
-            return cmath.sinh(x);
-        else static if (is(T == real))
-            return cmath.sinhl(x);
+        return cast(T)cmath.sinh(cast(double)x);
     }
 }
 
@@ -319,12 +286,7 @@ T cosh(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_coshl(x);
     } else {
-        static if (is(T == float))
-            return cmath.coshf(x);
-        else static if (is(T == double))
-            return cmath.cosh(x);
-        else static if (is(T == real))
-            return cmath.coshl(x);
+        return cast(T)cmath.cosh(cast(double)x);
     }
 }
 
@@ -349,12 +311,7 @@ T tanh(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_tanhl(x);
     } else {
-        static if (is(T == float))
-            return cmath.tanhf(x);
-        else static if (is(T == double))
-            return cmath.tanh(x);
-        else static if (is(T == real))
-            return cmath.tanhl(x);
+        return cast(T)cmath.tanh(cast(double)x);
     }
 }
 
@@ -379,12 +336,7 @@ T asinh(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_asinhl(x);
     } else {
-        static if (is(T == float))
-            return cmath.asinhf(x);
-        else static if (is(T == double))
-            return cmath.asinh(x);
-        else static if (is(T == real))
-            return cmath.asinhl(x);
+        return cast(T)cmath.asinh(cast(double)x);
     }
 }
 
@@ -409,12 +361,7 @@ T acosh(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_acoshl(x);
     } else {
-        static if (is(T == float))
-            return cmath.acoshf(x);
-        else static if (is(T == double))
-            return cmath.acosh(x);
-        else static if (is(T == real))
-            return cmath.acoshl(x);
+        return cast(T)cmath.acosh(cast(double)x);
     }
 }
 
@@ -439,12 +386,7 @@ T atanh(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_atanhl(x);
     } else {
-        static if (is(T == float))
-            return cmath.atanhf(x);
-        else static if (is(T == double))
-            return cmath.atanh(x);
-        else static if (is(T == real))
-            return cmath.atanhl(x);
+        return cast(T)cmath.atanh(cast(double)x);
     }
 }
 
@@ -470,12 +412,7 @@ T trunc(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_truncl(x);
     } else {
-        static if (is(T == float))
-            return cmath.truncf(x);
-        else static if (is(T == double))
-            return cmath.trunc(x);
-        else static if (is(T == real))
-            return cmath.truncl(x);
+        return cast(T)cmath.trunc(cast(double)x);
     }
 }
 
@@ -485,6 +422,10 @@ unittest {
     assert(trunc(1.9999991) == 1);
     assert(trunc(1.0000001) == 1);
     assert(trunc(0.9999991) == 0);
+
+    assert(trunc(cast(float)1.0) == 1);
+    assert(trunc(cast(double)1.0) == 1);
+    assert(trunc(cast(real)1.0) == 1);
 }
 
 /**
@@ -507,12 +448,7 @@ T round(T)(T value) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_roundl(value);
     } else {
-        static if (is(T == float))
-            return cmath.roundf(value);
-        else static if (is(T == double))
-            return cmath.round(value);
-        else static if (is(T == real))
-            return cmath.roundl(value);
+        return cast(T)cmath.round(cast(double)value);
     }
 }
 
@@ -522,6 +458,10 @@ unittest {
     assert(round(0.25) == 0);
     assert(round(0.5) == 1);
     assert(round(0.95) == 1);
+
+    assert(round(cast(float)1.0) == 1);
+    assert(round(cast(double)1.0) == 1);
+    assert(round(cast(real)1.0) == 1);
 }
 
 /**
@@ -545,12 +485,7 @@ T floor(T)(T value) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_floorl(value);
     } else {
-        static if (is(T == float))
-            return cmath.floorf(value);
-        else static if (is(T == double))
-            return cmath.floor(value);
-        else static if (is(T == real))
-            return cmath.floorl(value);
+        return cast(T)cmath.floor(cast(double)value);
     }
 }
 
@@ -560,6 +495,10 @@ unittest {
     assert(floor(0.25) == 0);
     assert(floor(0.5) == 0);
     assert(floor(0.95) == 0);
+
+    assert(floor(cast(float)1.0) == 1);
+    assert(floor(cast(double)1.0) == 1);
+    assert(floor(cast(real)1.0) == 1);
 }
 
 /**
@@ -583,12 +522,7 @@ T ceil(T)(T value) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_ceill(value);
     } else {
-        static if (is(T == float))
-            return cmath.ceilf(value);
-        else static if (is(T == double))
-            return cmath.ceil(value);
-        else static if (is(T == real))
-            return cmath.ceill(value);
+        return cast(T)cmath.ceil(cast(double)value);
     }
 }
 
@@ -598,6 +532,10 @@ unittest {
     assert(ceil(0.25) == 1);
     assert(ceil(0.5) == 1);
     assert(ceil(0.95) == 1);
+    
+    assert(ceil(cast(float)1.0) == 1);
+    assert(ceil(cast(double)1.0) == 1);
+    assert(ceil(cast(real)1.0) == 1);
 }
 
 /**
@@ -622,16 +560,7 @@ T abs(T)(T value) if (__traits(isScalar, T)) {
             else static if (is(T == real))
                 return __builtin_fabsl(value);
         } else {
-            version(CRuntime_Microsoft) {
-                return cast(T)cmath.fabs(cast(double)value);
-            } else {
-                static if (is(T == float))
-                    return cmath.fabsf(value);
-                else static if (is(T == double))
-                    return cmath.fabs(value);
-                else static if (is(T == real))
-                    return cmath.fabsl(value);
-            }
+            return cast(T)cmath.fabs(cast(double)value);
         }
     } else {
         return value < 0 ? -value : value;
@@ -643,6 +572,10 @@ unittest {
     foreach(i; 0..100) {
         assert(abs(cast(float)-i) == cast(float)i);
     }
+    
+    assert(abs(cast(float)1.0) == 1);
+    assert(abs(cast(double)1.0) == 1);
+    assert(abs(cast(real)1.0) == 1);
 }
 
 /**
@@ -668,12 +601,7 @@ T rint(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return __builtin_rintl(value);
     } else {
-        static if (is(T == float))
-            return cmath.rintf(value);
-        else static if (is(T == double))
-            return cmath.rint(value);
-        else static if (is(T == real))
-            return cmath.rintl(value);
+        return cast(T)cmath.rint(cast(double)value);
     }
 }
 
@@ -848,6 +776,13 @@ T ldexp(T)(T n, int exp) if (__traits(isFloating, T)) {
             (cast(U*)&vf)[idx] = u;
         }
         return vf;
+    } else version(GNU) {
+        static if (is(T == float))
+            return __builtin_ldexpf(n, exp);
+        else static if (is(T == double))
+            return __builtin_ldexp(n, exp);
+        else static if (is(T == real))
+            return __builtin_ldexpl(n, exp);
     } else {
         return cast(T)cmath.ldexp(cast(double)n, exp);
     }

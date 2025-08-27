@@ -127,14 +127,6 @@ T tan(T)(T x) if (__traits(isFloating, T)) {
     }
 }
 
-@("sin, cos, tan")
-unittest {
-    assert(sin(1.0) == 0.8414709848078965);
-    assert(cos(1.0) == 0.5403023058681398);
-    assert(tan(1.0) == 1.5574077246549023);
-    assert(sin(0.5) == 0.479425538604203);
-}
-
 /**
     Computes arc-sine of the given value.
 

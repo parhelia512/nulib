@@ -576,12 +576,16 @@ T abs(T)(T value) if (__traits(isScalar, T)) {
             else static if (is(T == real))
                 return __builtin_fabsl(value);
         } else {
-            static if (is(T == float))
-                return cmath.fabsf(value);
-            else static if (is(T == double))
-                return cmath.fabs(value);
-            else static if (is(T == real))
-                return cmath.fabsl(value);
+            version(CRuntime_Microsoft) {
+                return cast(T)cmath.fabs(cast(double)value);
+            } else {
+                static if (is(T == float))
+                    return cmath.fabsf(value);
+                else static if (is(T == double))
+                    return cmath.fabs(value);
+                else static if (is(T == real))
+                    return cmath.fabsl(value);
+            }
         }
     } else {
         return value < 0 ? -value : value;
@@ -792,7 +796,7 @@ T ldexp(T)(T n, int exp) if (__traits(isFloating, T)) {
         }
         return vf;
     } else {
-        return cast(T)cmath.ldexp(n, exp);
+        return cast(T)cmath.ldexp(cast(double)n, exp);
     }
 }
 

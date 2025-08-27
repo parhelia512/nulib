@@ -10,6 +10,7 @@
         Luna Nielsen
 */
 module nulib.math.floating;
+import nulib.math.intrinsics;
 
 @safe @nogc nothrow pure:
 
@@ -27,6 +28,15 @@ bool isNaN(T)(T x) @safe @nogc nothrow pure if (__traits(isFloating, T)) {
     return x != x;
 }
 
+@("isNaN")
+unittest {
+    assert(isNaN(float.nan));
+    assert(isNaN(double.nan));
+    assert(isNaN(real.nan));
+    assert(!isNaN(0.0));
+    assert(!isNaN(double.infinity));
+}
+
 /**
     Determines whether the given value is a finite number.
 
@@ -41,6 +51,13 @@ bool isFinite(T)(T x) @safe @nogc nothrow pure if (__traits(isFloating, T)) {
     return x == x && x != T.infinity && x != -T.infinity;
 }
 
+@("isFinite")
+unittest {
+    assert(isFinite(1.0));
+    assert(!isFinite(double.nan));
+    assert(!isFinite(real.infinity));
+}
+
 /**
     Determines whether the given value is an infinite number.
 
@@ -51,13 +68,21 @@ bool isFinite(T)(T x) @safe @nogc nothrow pure if (__traits(isFloating, T)) {
         $(D true) if $(D x) is an infinite floating point number,
         $(D false) otherwise.
 */
-bool isInfinity(T)(T x) @safe @nogc nothrow pure if (__traits(isFloating, T)) {
+bool isInfinity(T)(T x) @trusted @nogc nothrow pure if (__traits(isFloating, T)) {
     static if (is(T == float)) {
         return ((*cast(uint *)&x) & 0x7FFF_FFFF) == 0x7F80_0000;
     } else static if (is(T == double)) {
         return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF0_0000_0000_0000;
     } else return (x < -T.max) || (T.max < x);
+}
+
+@("isInfinity")
+unittest {
+    assert(isInfinity(float.infinity));
+    assert(isInfinity(-float.infinity));
+    assert(!isInfinity(double.nan));
+    assert(!isInfinity(0.0));
 }
 
 /**
@@ -71,6 +96,11 @@ bool isInfinity(T)(T x) @safe @nogc nothrow pure if (__traits(isFloating, T)) {
 */
 T fract(T)(T value) if(__traits(isFloating, T)) {
     return cast(T)(cast(real)value - trunc(cast(real)value));
+}
+
+@("fract")
+unittest {
+    assert(fract(1.5) == 0.5);
 }
 
 /**

@@ -39,6 +39,12 @@ T sqrt(T)(T x) if (__traits(isFloating, T)) {
     }
 }
 
+@("sqrt")
+unittest {
+    assert(sqrt(9.0) == 3.0);
+    assert(sqrt(10.0) == 3.1622776601683795);
+}
+
 /**
     Computes sine of the given value.
 
@@ -127,6 +133,14 @@ T tan(T)(T x) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return cmath.tanl(x);
     }
+}
+
+@("sin, cos, tan")
+unittest {
+    assert(sin(1.0) == 0.8414709848078965);
+    assert(cos(1.0) == 0.5403023058681398);
+    assert(tan(1.0) == 1.5574077246549023);
+    assert(sin(0.5) == 0.479425538604203);
 }
 
 /**
@@ -465,6 +479,14 @@ T trunc(T)(T x) if (__traits(isFloating, T)) {
     }
 }
 
+@("trunc")
+unittest {
+    assert(trunc(1.5) == 1);
+    assert(trunc(1.9999991) == 1);
+    assert(trunc(1.0000001) == 1);
+    assert(trunc(0.9999991) == 0);
+}
+
 /**
     Computes the nearest integer value, rounded away from 0.
 
@@ -492,6 +514,14 @@ T round(T)(T value) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return cmath.roundl(value);
     }
+}
+
+@("round")
+unittest {
+    assert(round(0.0) == 0);
+    assert(round(0.25) == 0);
+    assert(round(0.5) == 1);
+    assert(round(0.95) == 1);
 }
 
 /**
@@ -524,6 +554,14 @@ T floor(T)(T value) if (__traits(isFloating, T)) {
     }
 }
 
+@("floor")
+unittest {
+    assert(floor(0.0) == 0);
+    assert(floor(0.25) == 0);
+    assert(floor(0.5) == 0);
+    assert(floor(0.95) == 0);
+}
+
 /**
     Computes the nearest integer value lower than the given value.
 
@@ -552,6 +590,14 @@ T ceil(T)(T value) if (__traits(isFloating, T)) {
         else static if (is(T == real))
             return cmath.ceill(value);
     }
+}
+
+@("ceil")
+unittest {
+    assert(ceil(0.0) == 0);
+    assert(ceil(0.25) == 1);
+    assert(ceil(0.5) == 1);
+    assert(ceil(0.95) == 1);
 }
 
 /**
@@ -589,6 +635,13 @@ T abs(T)(T value) if (__traits(isScalar, T)) {
         }
     } else {
         return value < 0 ? -value : value;
+    }
+}
+
+@("abs")
+unittest {
+    foreach(i; 0..100) {
+        assert(abs(cast(float)-i) == cast(float)i);
     }
 }
 

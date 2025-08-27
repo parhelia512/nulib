@@ -16,7 +16,7 @@ version (GNU) import gcc.builtins;
 else version (LDC) import ldc.intrinsics;
 else {
     import nmath = nulib.math.floating;
-    import cmath = core.stdc.math;
+    import cmath = nulib.c.math;
 }
 
 @safe @nogc nothrow pure:

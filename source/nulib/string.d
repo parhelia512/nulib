@@ -211,7 +211,8 @@ private:
     MemoryT otherToSelf(U)(auto ref U in_) 
     if(isSomeString!U) {
         static if (is(StringCharType!SelfType == StringCharType!U)) {
-            return in_.sliceof.nu_dup().nu_terminate();
+            auto val = in_.sliceof.nu_dup();
+            return val.nu_terminate();
         } else {
 
             // Otherwise we need to do unicode conversion.
@@ -439,19 +440,21 @@ public:
             as such, you are responsible for freeing prior memory
             where relevant.
     */
-    void opAssign(U)(inout(T)[] other) @trusted
+    void opAssign(U)(U other) @trusted
     if (isSomeString!U) {
-        
         static if (!is(StringCharType!U == StringCharType!SelfType)) {
-            if (!(flags & STRFLAG_READONLY)) 
+            if (!(flags & STRFLAG_READONLY) && memory.ptr) 
                 nu_free(cast(void*)this.memory.ptr);
             
-            this.memory = other.nu_idup();
-            nu_terminate(this.memory);
+            this.memory = other.sliceof.nu_dup();
+            nu_terminate(memory);
 
             // Take ownership of our new memory.
             if (flags & STRFLAG_READONLY) 
                 flags &= ~STRFLAG_READONLY;
+        } else {
+            auto val = otherToSelf(other.sliceof);
+            this.memory = val;
         }
     }
 
@@ -472,7 +475,7 @@ public:
     /**
         Appends a string to this string.
     */
-    void opOpAssign(string op, U)(auto ref inout(U) other) @trusted
+    void opOpAssign(string op, U)(auto ref U other) @trusted
     if (op == "~" && isSomeString!U) {
         
         // Skip appending empty strings.
@@ -509,20 +512,40 @@ public:
     /**
         Makes a nstring appended to this string.
     */
-    auto opBinary(string op, R)(inout R rhs) inout 
+    auto opBinary(string op, R)(auto ref inout R rhs) inout
     if (op == "~") {
-        SelfType result = this.sliceof;
-        result ~= rhs.sliceof;
+
+        // We can't be sure that the given strings won't be freed if we
+        // passed them in to opOpAssign, as such we copy them.
+        auto lhsv = this.sliceof.nu_dup();
+        auto rhsv = rhs.sliceof.nu_dup();
+
+        SelfType result;
+        result ~= lhsv;
+        result ~= rhsv;
+
+        nu_freea(lhsv);
+        nu_freea(rhsv);
         return result;
     }
 
     /**
-        Makes a nstring appended to this string.
+        Makes a nstring prepended to this string.
     */
-    auto opBinaryRight(string op, R)(inout R lhs) inout
+    auto opBinaryRight(string op, R)(auto ref inout R lhs) inout
     if (op == "~") {
-        SelfType result = lhs.sliceof;
-        result ~= this.sliceof;
+
+        // We can't be sure that the given strings won't be freed if we
+        // passed them in to opOpAssign, as such we copy them.
+        auto lhsv = lhs.sliceof.nu_dup();
+        auto rhsv = this.sliceof.nu_dup();
+
+        SelfType result;
+        result ~= lhsv;
+        result ~= rhsv;
+
+        nu_freea(lhsv);
+        nu_freea(rhsv);
         return result;
     }
 }

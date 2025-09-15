@@ -311,8 +311,10 @@ public:
                 // We want the null terminator, so use this ugly pointer
                 // arithmetic. We know enc will always have it anyways.
                 auto val = otherToSelf(rhs);
-                this.memory = cast(MemoryT)val.ptr[0..val.length];
+                this.memory = val;
             }
+            nu_terminate(this.memory);
+            
         } else {
             nogc_zeroinit(this.memory);
         }

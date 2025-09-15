@@ -56,7 +56,7 @@ enum isSomeChar(T) =
     is(T : char) || is(T : wchar) || is(T : dchar);
 
 /**
-    Gets whether [T] is convertible to any form of [nstring]
+    Gets whether $(D T) is convertible to any form of $(D nstring)
 */
 enum isStringable(T) = 
     __traits(hasMember, T, "toString") &&

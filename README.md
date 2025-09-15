@@ -4,6 +4,8 @@
 
 # NuLib
 
+[![Unit Tests](https://github.com/Inochi2D/nulib/actions/workflows/run_tests.yml/badge.svg)](https://github.com/Inochi2D/nulib/actions/workflows/run_tests.yml)
+
 NuLib is an alternative standard library for the D Programming Language, this standard library focuses
 on allowing use of high level D constructs without a garbage collector. Additionally these constructs try
 but are not guaranteed to work with phobos constructs to some extent.

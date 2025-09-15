@@ -267,56 +267,29 @@ public:
     ~this() {
         this.resizeImpl(0);
     }
-
-    /**
-        Creates an nstring
-    */
-    this(U)(immutable(U)[] rhs) @system
-    if (is(immutable(U)[] == immutable(T)[])) {
-        if (__ctfe) {
-            this.memory = cast(immutable(T)[])rhs;
-            this.flags |= STRFLAG_READONLY;
-        } else if (rhs) {
-            this.memory = cast(immutable(T)[])rhs.nu_idup;
-            nu_terminate(this.memory);
-        } else {
-            nogc_zeroinit(this.memory);
-        }
-    }
-
-    /**
-        Creates a string from a null-terminated C string.
-    */
-    this(U)(const(U)* rhs) @system
-    if (is(U == T)) {
-        if (rhs) {
-            this.memory = fromStringz(rhs).nu_idup;
-        } else {
-            nogc_zeroinit(this.memory);
-        }
-    }
     
     /**
         Creates a string from a string from any other UTF encoding.
     */
-    this(U)(auto ref inout(U)[] rhs) @system
-    if (isSomeChar!U) {
-        if (rhs) {
-            static if (is(Unqual!U == Unqual!T)) {
-
-                // Skip transformation if they're pratically the same.
-                this.memory = cast(MemoryT)rhs.nu_dup();
-            } else {
-
-                // We want the null terminator, so use this ugly pointer
-                // arithmetic. We know enc will always have it anyways.
-                auto val = otherToSelf(rhs);
-                this.memory = val;
+    this(U)(auto ref U rhs) @system
+    if (isSomeString!U) {
+        if (__ctfe) {
+            static if (is(StringCharType!U == StringCharType!SelfType)) {
+                this.flags |= STRFLAG_READONLY;
+                this.memory = cast(MemoryT)rhs.sliceof;
             }
-            nu_terminate(this.memory);
-            
         } else {
-            nogc_zeroinit(this.memory);
+            if (rhs) {
+                static if (is(StringCharType!U == StringCharType!SelfType)) {
+                    this.memory = cast(MemoryT)rhs.sliceof.nu_dup();
+                    nu_terminate(memory);
+                } else {
+                    auto val = otherToSelf(rhs.sliceof);
+                    this.memory = val;
+                }
+            } else {
+                nogc_zeroinit(this.memory);
+            }
         }
     }
 
@@ -444,7 +417,7 @@ public:
     */
     void opAssign(U)(U other) @trusted
     if (isSomeString!U) {
-        static if (!is(StringCharType!U == StringCharType!SelfType)) {
+        static if (is(StringCharType!U == StringCharType!SelfType)) {
             if (!(flags & STRFLAG_READONLY) && memory.ptr) 
                 nu_free(cast(void*)this.memory.ptr);
             
@@ -659,12 +632,16 @@ unittest {
 /**
     Gets the slice equivalent of the input string.
 */
-auto sliceof(T)(T str) @nogc nothrow
+auto sliceof(T)(auto ref T str) @nogc nothrow
 if(isSomeString!T) {
-    static if (isSomeCString!T) {
-        return str[0..nu_strlen(str)];
+    if (__ctfe) {
+        return str[0..(str.stringof.length)];
     } else {
-        return str[0..$];
+        static if (isSomeCString!T) {
+            return str[0..nu_strlen(str)];
+        } else {
+            return str[0..$];
+        }
     }
 }
 
@@ -675,7 +652,7 @@ unittest {
     nstring str3 = "Hello, world!";
     
     assert(str1.sliceof == str1.sliceof);
-    assert(str3.sliceof == str2.sliceof);
+    assert(str3.sliceof == str2.sliceof, str3.sliceof);
 }
 
 /**

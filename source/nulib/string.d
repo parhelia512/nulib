@@ -205,6 +205,22 @@ private:
         this.flags = 0;
     }
 
+    // Makes a copy of the given string transformed
+    // to fit the encoding of this string.
+    pragma(inline, true)
+    MemoryT otherToSelf(U)(auto ref U in_) 
+    if(isSomeString!U) {
+        static if (is(StringCharType!SelfType == StringCharType!U)) {
+            return in_.sliceof.nu_dup().nu_terminate();
+        } else {
+
+            // Otherwise we need to do unicode conversion.
+            auto dec = decode(in_.sliceof, false);
+            auto enc = encode!SelfType(dec, false);
+            return enc.take();
+        }
+    }
+
 public:
     alias value this;
 
@@ -291,13 +307,10 @@ public:
                 this.memory = cast(MemoryT)rhs.nu_dup();
             } else {
 
-                // Otherwise we need to do unicode conversion.
-                auto dec = decode(rhs, false);
-                auto enc = encode!(SelfType)(dec, false);
-
                 // We want the null terminator, so use this ugly pointer
                 // arithmetic. We know enc will always have it anyways.
-                this.memory = cast(MemoryT)enc.ptr[0..enc.realLength].nu_dup();
+                auto val = otherToSelf(rhs);
+                this.memory = cast(MemoryT)val.ptr[0..val.length];
             }
         } else {
             nogc_zeroinit(this.memory);
@@ -426,22 +439,27 @@ public:
             as such, you are responsible for freeing prior memory
             where relevant.
     */
-    void opAssign(inout(T)[] other) @trusted {
-        if (!(flags & STRFLAG_READONLY)) 
-            nu_free(cast(void*)this.memory.ptr);
+    void opAssign(U)(inout(T)[] other) @trusted
+    if (isSomeString!U) {
         
-        this.memory = other.nu_idup();
-        nu_terminate(this.memory);
+        static if (!is(StringCharType!U == StringCharType!SelfType)) {
+            if (!(flags & STRFLAG_READONLY)) 
+                nu_free(cast(void*)this.memory.ptr);
+            
+            this.memory = other.nu_idup();
+            nu_terminate(this.memory);
 
-        // Take ownership of our new memory.
-        if (flags & STRFLAG_READONLY) 
-            flags &= ~STRFLAG_READONLY;
+            // Take ownership of our new memory.
+            if (flags & STRFLAG_READONLY) 
+                flags &= ~STRFLAG_READONLY;
+        }
     }
 
     /**
         Appends a character to this string.
     */
-    void opOpAssign(string op = "~")(auto ref inout(T) value) @trusted {
+    void opOpAssign(string op, U)(auto ref inout(U) value) @trusted
+    if (op == "~" && isSomeChar!U) {
         this.resizeImpl(length+1);
         this.setCharImpl(cast(void*)(&memory[$-1]), value);
     }
@@ -449,27 +467,54 @@ public:
     /**
         Appends a string to this string.
     */
-    void opOpAssign(string op = "~")(inout(T)[] other) @trusted {
+    void opOpAssign(string op, U)(auto ref inout(U) other) @trusted
+    if (op == "~" && isSomeString!U) {
         size_t start = memory.length;
+        static if (!is(StringCharType!U == StringCharType!SelfType)) {
+            pragma(msg, StringCharType!U, " ", StringCharType!SelfType);
 
-        if (isOverlapping(memory, other)) {
-            other = other.nu_dup();
+            // We want the null terminator, so use this ugly pointer
+            // arithmetic. We know enc will always have it anyways.
+            auto otherSlice = otherToSelf(other);
+            
+            this.resizeImpl(memory.length+otherSlice.length);
+            this.setRangeImpl(memory[start..$], otherSlice[0..$]);
 
-            this.resizeImpl(memory.length+other.length);
-            this.setRangeImpl(memory[start..$], other[0..$]);
-            other = other.nu_resize(0);
-            return;
+            nu_freea(otherSlice);
+        } else {
+            auto otherSlice = other.sliceof;
+            if (isOverlapping(memory, otherSlice)) {
+                auto tmp = otherSlice.nu_dup();
+
+                this.resizeImpl(memory.length+tmp.length);
+                this.setRangeImpl(memory[start..$], tmp[0..$]);
+                tmp = tmp.nu_resize(0);
+                return;
+            }
+
+            this.resizeImpl(memory.length+otherSlice.length);
+            this.setRangeImpl(memory[start..$], otherSlice[0..$]);
         }
-
-        this.resizeImpl(memory.length+other.length);
-        this.setRangeImpl(memory[start..$], other[0..$]);
     }
 
     /**
-        Appends a c string to this string.
+        Makes a nstring appended to this string.
     */
-    void opOpAssign(string op = "~")(inout(T)* other) @system {
-        this.opOpAssign!"~"(fromStringz!T(other));
+    auto opBinary(string op, R)(inout R rhs) inout 
+    if (op == "~") {
+        SelfType result = this.sliceof;
+        result ~= rhs.sliceof;
+        return result;
+    }
+
+    /**
+        Makes a nstring appended to this string.
+    */
+    auto opBinaryRight(string op, R)(inout R lhs) inout
+    if (op == "~") {
+        SelfType result = lhs.sliceof;
+        result ~= this.sliceof;
+        return result;
     }
 }
 
@@ -553,9 +598,51 @@ unittest {
     assert(str.ptr is null);
 }
 
+@("nstring: concat")
+unittest {
+    assert(nstring("Hello, ") ~ "world!" == "Hello, world!");
+}
+
+@("nstring: concat convert")
+unittest {
+    import std.utf : toUTF8;
+    import std.stdio : writeln;
+
+    auto str1 = nstring("Hello, ") ~ nwstring("world!"w);
+    assert(str1 == "Hello, world!", str1.sliceof);
+
+    auto str2 = ndstring("Hello, ") ~ nstring("world!");
+    assert(str2 == "Hello, world!"d, str2.sliceof.toUTF8);
+
+    auto str3 = nstring("Hello, ") ~ "world!"w;
+    assert(str3 == "Hello, world!", str3.sliceof.toUTF8);
+}
+
 //
 //      C and D string handling utilities
 //
+
+/**
+    Gets the slice equivalent of the input string.
+*/
+auto sliceof(T)(T str) @nogc nothrow
+if(isSomeString!T) {
+    static if (isSomeCString!T) {
+        return str[0..nu_strlen(str)];
+    } else {
+        return str[0..$];
+    }
+}
+
+@("sliceof")
+unittest {
+    const(char)* str1 = "Hello, world!";
+    const(char)[] str2 = "Hello, world!";
+    nstring str3 = "Hello, world!";
+    
+    assert(str1.sliceof == str1.sliceof);
+    assert(str3.sliceof == str2.sliceof);
+}
 
 /**
     Gets a slice from a null-terminated string.

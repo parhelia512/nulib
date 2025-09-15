@@ -460,6 +460,11 @@ public:
     */
     void opOpAssign(string op, U)(auto ref inout(U) value) @trusted
     if (op == "~" && isSomeChar!U) {
+        
+        // Don't insert null terminators.
+        if (value == cast(U)0)
+            return;
+        
         this.resizeImpl(length+1);
         this.setCharImpl(cast(void*)(&memory[$-1]), value);
     }
@@ -469,9 +474,13 @@ public:
     */
     void opOpAssign(string op, U)(auto ref inout(U) other) @trusted
     if (op == "~" && isSomeString!U) {
+        
+        // Skip appending empty strings.
+        if (other.sliceof.length == 0)
+            return;
+
         size_t start = memory.length;
         static if (!is(StringCharType!U == StringCharType!SelfType)) {
-            pragma(msg, StringCharType!U, " ", StringCharType!SelfType);
 
             // We want the null terminator, so use this ugly pointer
             // arithmetic. We know enc will always have it anyways.
@@ -557,6 +566,26 @@ unittest {
     assert(wd == "ho"d);
 }
 
+@("nstring: concat")
+unittest {
+    auto str1 = nstring("Hello, ") ~ "world!";
+    assert(str1 == "Hello, world!", str1.sliceof);
+}
+
+@("nstring: concat convert")
+unittest {
+    import std.utf : toUTF8;
+
+    auto str1 = nstring("Hello, ") ~ nwstring("world!"w);
+    assert(str1 == "Hello, world!", str1.sliceof);
+
+    auto str2 = ndstring("Hello, ") ~ nstring("world!");
+    assert(str2 == "Hello, world!"d, str2.sliceof.toUTF8);
+
+    auto str3 = nstring("Hello, ") ~ "world!"w;
+    assert(str3 == "Hello, world!", str3.sliceof.toUTF8);
+}
+
 @("nstring: reverse")
 unittest {
     nstring str = "Test";
@@ -596,26 +625,6 @@ unittest {
     str.clear();
     assert(str.empty);
     assert(str.ptr is null);
-}
-
-@("nstring: concat")
-unittest {
-    assert(nstring("Hello, ") ~ "world!" == "Hello, world!");
-}
-
-@("nstring: concat convert")
-unittest {
-    import std.utf : toUTF8;
-    import std.stdio : writeln;
-
-    auto str1 = nstring("Hello, ") ~ nwstring("world!"w);
-    assert(str1 == "Hello, world!", str1.sliceof);
-
-    auto str2 = ndstring("Hello, ") ~ nstring("world!");
-    assert(str2 == "Hello, world!"d, str2.sliceof.toUTF8);
-
-    auto str3 = nstring("Hello, ") ~ "world!"w;
-    assert(str3 == "Hello, world!", str3.sliceof.toUTF8);
 }
 
 //

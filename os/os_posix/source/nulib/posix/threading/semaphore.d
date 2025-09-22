@@ -13,6 +13,17 @@ import nulib.threading.internal.semaphore;
 import nulib.posix.common;
 import numem;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+else version (VisionOS)
+    version = Darwin;
+
 /**
     Native implementation of a semaphore.
 */
@@ -95,9 +106,8 @@ public:
             }
 
             mach_timespec_t t;
-            t.tv_sec = timeout / 1000;
-            t.tv_nsec = timeout % 1000;
-            auto rc = semaphore_timedwait(sem_);
+            t.tv_sec = cast(uint)(timeout / 1000);
+            t.tv_nsec = cast(uint)(timeout % 1000);
             while(true) {
                 auto rc = semaphore_timedwait(sem_, t);
                 if (!rc)
@@ -124,7 +134,7 @@ public:
 
             timespec t;
             cast(void)clock_gettime(0, &t);
-            t.secs += timeout / 1000;
+            t.secs += (timeout / 1000);
             t.nsecs = (t.nsecs + timeout) % 1000;
             while(true) {
                 if (!sem_timedwait(&sem_, &t))

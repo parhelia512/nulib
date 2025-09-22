@@ -20,17 +20,6 @@ public:
 @nogc:
 
     /**
-        Creates a new native mutex using a linked backend.
-
-        Returns:
-            A new $(D NativeMutex) or $(D null) if the
-            platform does not support mutexes.
-    */
-    static NativeMutex create() {
-        return _nu_mutex_new();
-    }
-
-    /**
         Increments the internal lock counter.
     */
     abstract void lock() nothrow @trusted;
@@ -50,15 +39,3 @@ public:
     */
     abstract void unlock() nothrow @trusted;
 }
-
-//
-//          FOR IMPLEMENTORS
-//
-
-private extern(C):
-import core.attribute : weak;
-
-/*
-    Backend function used to create a new mutex object.
-*/
-NativeMutex _nu_mutex_new() @weak @nogc nothrow { return null; }

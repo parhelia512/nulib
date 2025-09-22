@@ -30,8 +30,8 @@ public:
     /**
         Constructs a new Mutex.
     */
-    this() {
-        this.semaphore_ = NativeSemaphore.create();
+    this(uint count = 0) {
+        this.semaphore_ = NativeSemaphore.create(count);
         enforce(semaphore_, "Semaphore is not supported on this platform.");
     }
 

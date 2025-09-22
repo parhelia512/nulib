@@ -9,25 +9,44 @@
     Authors:   Luna Nielsen
 */
 module nulib.threading.process;
+import nulib.threading.internal.process;
 import numem;
 
 /**
     A process.
 */
-abstract
 class Process : NuObject {
-public:
+private:
 @nogc:
+    NativeProcess process_;
+
+public:
 
     /**
         The current running process.
     */
-    static @property Process thisProcess() => _nu_process_get_self();
+    static @property Process thisProcess() @safe => nogc_new!Process(NativeProcess.thisProcess());
 
     /**
         The ID of the process.
     */
-    abstract @property uint pid();
+    @property uint pid() @safe => process_.pid;
+
+    // Destructor
+    ~this() {
+        nogc_delete(process_);
+    }
+
+    /**
+        Constructs a new high level process from its
+        native equiavlent.
+
+        Params:
+            process = The native process handle.
+    */
+    this(NativeProcess process) {
+        this.process_ = process;
+    }
 
     /**
         Kills the given process.
@@ -36,17 +55,12 @@ public:
             $(D true) if the operation succeeded,
             $(D false) otherwise.
     */
-    abstract bool kill();
+    bool kill() @safe {
+        return process_.kill();
+    }
 }
 
-//
-//          FOR IMPLEMENTORS
-//
-
-private extern(C):
-import core.attribute : weak;
-
-/*
-    Optional helper which gets the current running process.
-*/
-Process _nu_process_get_self() @weak @nogc nothrow { return null; }
+@("thisProcess")
+unittest {
+    assert(Process.thisProcess.pid != 0);
+}

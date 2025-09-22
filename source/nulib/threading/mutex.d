@@ -45,16 +45,12 @@ public:
     /**
         Tries to increment the internal lock counter.
 
-        Params:
-            timeout =   Timeout in miliseconds to block the 
-                        calling thread before giving up.
-
         Returns:
             $(D true) if the mutex was locked,
             $(D false) otherwise.
     */
-    bool tryLock(ulong timeout = 0) nothrow @safe {
-        return mutex_.tryLock(timeout);
+    bool tryLock() nothrow @safe {
+        return mutex_.tryLock();
     }
 
     /**
@@ -63,21 +59,5 @@ public:
     */
     void unlock() nothrow @safe {
         mutex_.unlock();
-    }
-
-    /**
-        Tries to decrement the internal lock counter.
-        If the counter reaches 0, the lock is released.
-
-        Params:
-            timeout =   Timeout in miliseconds to block the 
-                        calling thread before giving up.
-
-        Returns:
-            $(D true) if the mutex was unlocked,
-            $(D false) otherwise.
-    */
-    bool tryUnlock(ulong timeout = 0) nothrow @safe {
-        return mutex_.tryUnlock(timeout);
     }
 }

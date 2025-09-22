@@ -20,15 +20,6 @@ public:
 @nogc:
 
     /**
-        Creates a new native semaphore using a linked backend.
-
-        Returns:
-            A new $(D NativeSemaphore) or $(D null) if the
-            platform does not support mutexes.
-    */
-    static NativeSemaphore create(uint count) => _nu_semaphore_new(count);
-
-    /**
         Signals the semaphore.
 
         Note:
@@ -60,15 +51,3 @@ public:
     */
     abstract bool tryAwait();
 }
-
-//
-//          FOR IMPLEMENTORS
-//
-
-private extern(C):
-import core.attribute : weak;
-
-/*
-    Function which creates a new native semaphore.
-*/
-NativeSemaphore _nu_semaphore_new(uint count) @weak @nogc nothrow { return null; }

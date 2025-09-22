@@ -25,7 +25,12 @@ public:
     /**
         The current running process.
     */
-    static @property Process thisProcess() @safe => nogc_new!Process(NativeProcess.thisProcess());
+    static @property Process thisProcess() @safe {
+        if (auto proc = NativeProcess.thisProcess)
+            return nogc_new!Process(proc);
+        
+        return null;
+    }
 
     /**
         The ID of the process.
@@ -62,5 +67,6 @@ public:
 
 @("thisProcess")
 unittest {
+    assert(Process.thisProcess);
     assert(Process.thisProcess.pid != 0);
 }

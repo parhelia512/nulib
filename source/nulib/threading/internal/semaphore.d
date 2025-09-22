@@ -69,6 +69,6 @@ private extern(C):
 import core.attribute : weak;
 
 /*
-    Optional helper which gets the current running process.
+    Function which creates a new native semaphore.
 */
 NativeSemaphore _nu_semaphore_new() @weak @nogc nothrow { return null; }

@@ -73,15 +73,3 @@ public:
         return semaphore_.tryAwait();
     }
 }
-
-//
-//          FOR IMPLEMENTORS
-//
-
-private extern(C):
-import core.attribute : weak;
-
-/*
-    Optional helper which gets the current running process.
-*/
-Semaphore _nu_semaphore_new() @weak @nogc nothrow { return null; }

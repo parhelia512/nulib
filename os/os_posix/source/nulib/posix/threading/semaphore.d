@@ -16,7 +16,6 @@ import numem;
 /**
     Native implementation of a semaphore.
 */
-abstract
 class PosixSemaphore : NativeSemaphore {
 private:
 @nogc:
@@ -26,28 +25,26 @@ private:
 public:
 
     /// Destructor
-    ~this() {
+    ~this() nothrow {
         version(Darwin) {
-            assert(
-                semaphore_destroy(mach_task_self(), sem_) == KERN_SUCCESS, 
-                "Failed to destroy semaphore!"
-            );
+            auto rc = semaphore_destroy(mach_task_self(), sem_);
+            assert(rc == KERN_SUCCESS, "Failed to destroy semaphore!");
         } else {
-            assert(sem_destroy(&sem_) == 0, "Failed to destroy semaphore!");
+            auto rc = sem_destroy(&sem_);
+            assert(rc == 0, "Failed to destroy semaphore!");
         }
     }
 
     /**
         Constructs a new Posix Semaphore.
     */
-    this(uint count) {
+    this(uint count) nothrow {
         version(Darwin) {
-            assert(
-                semaphore_create(mach_task_self(), &sem_, SYNC_POLICY_FIFO, count) == KERN_SUCCESS, 
-                "Failed to create semaphore!"
-            );
+            auto rc = semaphore_create(mach_task_self(), &sem_, SYNC_POLICY_FIFO, count);
+            assert(rc == KERN_SUCCESS, "Failed to create semaphore!");
         } else {
-            assert(sem_init(&sem_, 0, count) == 0, "Failed to create semaphore!");
+            auto rc = sem_init(&sem_, 0, count);
+            assert(rc == 0, "Failed to create semaphore!");
         }
     }
 
@@ -60,9 +57,11 @@ public:
     override
     void signal() {
         version(Darwin) {
-            assert(semaphore_signal(sem_) == KERN_SUCCESS, "Failed to signal semaphore!");
+            auto rc = semaphore_signal(sem_);
+            assert(rc == KERN_SUCCESS, "Failed to signal semaphore!");
         } else {
-            assert(sem_post(&sem_) == 0, "Failed to signal semaphore!");
+            auto rc = sem_post(&sem_);
+            assert(rc == 0, "Failed to signal semaphore!");
         }
     }
 
@@ -192,7 +191,7 @@ public:
 
 extern(C) export
 NativeSemaphore _nu_semaphore_new(uint count) @trusted @nogc nothrow {
-    return null;
+    return nogc_new!PosixSemaphore(count);
 }
 
 //

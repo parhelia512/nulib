@@ -73,3 +73,11 @@ public:
         return semaphore_.tryAwait();
     }
 }
+
+@("signal and await")
+unittest {
+    Semaphore s = nogc_new!Semaphore();
+    s.signal();
+    assert(s.tryAwait());
+    nogc_delete(s);
+}

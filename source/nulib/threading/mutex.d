@@ -61,3 +61,11 @@ public:
         mutex_.unlock();
     }
 }
+
+@("lock and unlock")
+unittest {
+    Mutex m = nogc_new!Mutex();
+    m.lock();
+    m.unlock();
+    nogc_delete(m);
+}

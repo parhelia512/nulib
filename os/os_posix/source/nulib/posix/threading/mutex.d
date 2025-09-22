@@ -24,16 +24,25 @@ private:
 public:
 
     ~this() nothrow {
-        assert(!pthread_mutex_destroy(&handle_), "Failed to destroy mutex!");
+        auto rc = pthread_mutex_destroy(&handle_);
+        assert(!rc, "Failed to destroy mutex!");
     }
 
     this() nothrow {
         pthread_mutexattr_t attr = void;
-        assert(!pthread_mutexattr_init(&attr), "Failed to create mutex!");
-        scope(exit) assert(!pthread_mutexattr_destroy(&attr), "Failed to create mutex!");
+        auto rc = pthread_mutexattr_init(&attr);
+        assert(!rc, "Failed to create mutex!");
 
-        assert(!pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE), "Failed to create mutex!");
-        assert(!pthread_mutex_init(&handle_, &attr), "Failed to create mutex!");
+        if (!rc) {
+            rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+            assert(!rc, "Failed to create mutex!");
+
+            rc = pthread_mutex_init(&handle_, &attr);
+            assert(!rc, "Failed to create mutex!");
+        }
+
+        rc = pthread_mutexattr_destroy(&attr);
+        assert(!rc, "Failed to create mutex!");
     }
 
     /**
@@ -65,7 +74,7 @@ public:
     */
     override
     void unlock() nothrow @trusted {
-        if (pthread_mutex_lock(&handle_) == 0)
+        if (pthread_mutex_unlock(&handle_) == 0)
             return;
 
         assert(0, "Failed to unlock mutex!");

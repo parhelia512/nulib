@@ -26,7 +26,7 @@ public:
     /// Destructor
     ~this() nothrow {
         auto rc = CloseHandle(handle_);
-        assert(rc, "Unabled to destroy semaphore!");
+        assert(rc, "Failed to destroy semaphore!");
     }
 
     /**

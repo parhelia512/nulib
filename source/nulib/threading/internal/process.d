@@ -56,7 +56,7 @@ version(linux) {
     /*
         Optional helper which gets the current running process.
     */
-    extern(C) export
+    extern(C)
     NativeProcess _nu_process_get_self() @weak @nogc @trusted nothrow {
         return null;
     }

@@ -14,6 +14,7 @@ import numem;
 /**
     Native implementation of a semaphore.
 */
+extern
 abstract
 class NativeSemaphore : NuObject {
 public:

@@ -14,6 +14,7 @@ import numem;
 /**
     Native implementation of a mutually exclusive lock.
 */
+extern
 abstract
 class NativeMutex : NuObject {
 public:

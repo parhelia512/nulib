@@ -14,6 +14,7 @@ import numem;
 /**
     A process.
 */
+extern
 abstract
 class NativeProcess : NuObject {
 public:

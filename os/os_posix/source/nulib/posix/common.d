@@ -9,6 +9,7 @@
     Authors:   Luna Nielsen
 */
 module nulib.posix.common;
-public import nulib.posix.errno;
 
-extern (C) @nogc nothrow:
+public import nulib.posix.ccfg;
+public import nulib.posix.errno;
+public import nulib.posix.pthread;

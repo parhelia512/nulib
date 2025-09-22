@@ -49,7 +49,8 @@ enum isSomeCString(T) =
 
 /// Gets whether the provided type is some type of D string slice.
 enum isSomeDString(T) =
-    is(immutable(T) == immutable(C[]), C) && isSomeChar!C;
+    (is(immutable(T) == immutable(C[]), C) && isSomeChar!C) ||
+    (is(T : C2[], C2) && isSomeChar!C2);
 
 /// Gets whether the provided type is a character
 enum isSomeChar(T) =
@@ -267,7 +268,7 @@ public:
     ~this() {
         this.resizeImpl(0);
     }
-    
+
     /**
         Creates a string from a string from any other UTF encoding.
     */

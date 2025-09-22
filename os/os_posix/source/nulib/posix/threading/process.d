@@ -12,8 +12,6 @@ module nulib.posix.threading.process;
 import nulib.threading.internal.process;
 import numem;
 
-version(Posix):
-
 class PosixProcess : NativeProcess {
 private:
 @nogc:
@@ -46,9 +44,7 @@ public:
     }
 }
 
-extern(C):
-
-export
+extern(C) export
 NativeProcess _nu_process_get_self() @nogc @trusted nothrow {
     return nogc_new!PosixProcess(.getpid());
 }

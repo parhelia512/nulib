@@ -46,7 +46,18 @@ public:
 private extern(C):
 import core.attribute : weak;
 
-/*
-    Optional helper which gets the current running process.
-*/
-NativeProcess _nu_process_get_self() @weak @nogc @trusted nothrow { return null; }
+version(linux) {
+
+    // Needed on Linux because we can't specify load order.
+    extern(C)
+    extern NativeProcess _nu_process_get_self() @nogc @trusted nothrow;
+} else {
+    
+    /*
+        Optional helper which gets the current running process.
+    */
+    extern(C) export
+    NativeProcess _nu_process_get_self() @weak @nogc @trusted nothrow {
+        return null;
+    }
+}

@@ -58,7 +58,14 @@ public:
 private extern(C):
 import core.attribute : weak;
 
-/*
-    Backend function used to create a new mutex object.
-*/
-NativeMutex _nu_mutex_new() @weak @nogc nothrow { return null; }
+version(linux) {
+
+    // Needed on Linux because we can't specify load order.
+    extern(C)
+    extern NativeMutex _nu_mutex_new() @nogc @trusted nothrow;
+} else {
+    /*
+        Backend function used to create a new mutex object.
+    */
+    NativeMutex _nu_mutex_new() @weak @nogc nothrow { return null; }
+}

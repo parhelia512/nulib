@@ -68,7 +68,15 @@ public:
 private extern(C):
 import core.attribute : weak;
 
-/*
-    Function which creates a new native semaphore.
-*/
-NativeSemaphore _nu_semaphore_new(uint count) @weak @nogc nothrow { return null; }
+version(linux) {
+
+    // Needed on Linux because we can't specify load order.
+    extern(C)
+    extern NativeSemaphore _nu_semaphore_new(uint count) @nogc nothrow;
+} else {
+
+    /*
+        Function which creates a new native semaphore.
+    */
+    NativeSemaphore _nu_semaphore_new(uint count) @weak @nogc nothrow { return null; }
+}

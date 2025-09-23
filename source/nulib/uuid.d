@@ -291,7 +291,7 @@ public:
         snprintf(
             cast(char*)buffer.ptr,
             buffer.length,
-            "%0.8lx-%0.4hx-%0.4hx-%0.4hx-%.2hhx%.2hhx%.2hhx%.2hhx%.2hhx%.2hhx", 
+            "%0.8x-%0.4hx-%0.4hx-%0.4hx-%.2hhx%.2hhx%.2hhx%.2hhx%.2hhx%.2hhx", 
             time_low, 
             time_mid, 
             time_hi_and_version,

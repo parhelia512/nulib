@@ -39,11 +39,15 @@ jobs:
         # In this mode, `mainSourceFile` is excluded and `version (unittest)` are included
         # See https://dub.pm/package-format-json.html#configurations
         dub test --config=unittest
-        dub run -y redub -- test
 
         # Ditto, in release mode.
         # Sometimes D packages break in release mode, so this is important to test.
         dub test --config=unittest --build=release
+      
+    - name: 'Build with ${{ matrix.os }} ${{ matrix.dc }} (redub)'
+      if: ${{ matrix.dc != 'dmd' }}
+      run: |
+        dub run -y redub -- test
         dub run -y redub -- test --build=release
 
   test_build:

@@ -14,6 +14,7 @@ import numem;
 /**
     Native implementation of a mutually exclusive lock.
 */
+export
 abstract
 class NativeMutex : NuObject {
 public:
@@ -61,9 +62,9 @@ import core.attribute : weak;
 version(linux) {
 
     // Needed on Linux because we can't specify load order.
-    extern(C)
     extern NativeMutex _nu_mutex_new() @nogc @trusted nothrow;
 } else {
+    
     /*
         Backend function used to create a new mutex object.
     */

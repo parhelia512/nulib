@@ -14,6 +14,7 @@ import numem;
 /**
     Native implementation of a semaphore.
 */
+export
 abstract
 class NativeSemaphore : NuObject {
 public:
@@ -71,7 +72,6 @@ import core.attribute : weak;
 version(linux) {
 
     // Needed on Linux because we can't specify load order.
-    extern(C)
     extern NativeSemaphore _nu_semaphore_new(uint count) @nogc nothrow;
 } else {
 

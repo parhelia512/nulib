@@ -98,8 +98,8 @@ jobs:
       run: |
         dub build ${{ env.DUB_BUILD_CFG_FLAG }} --build=debug
         dub build ${{ env.DUB_BUILD_CFG_FLAG }} --build=release
-        dub run -y redub -- build ${{ env.DUB_BUILD_CFG_FLAG }} --build=debug
-        dub run -y redub -- build ${{ env.DUB_BUILD_CFG_FLAG }} --build=release
+        dub run -y redub -- build --build=debug
+        dub run -y redub -- build --build=release
       
     - name: 'Attempting to run tests...'
       working-directory: '${{ inputs.repo }}'
@@ -107,5 +107,5 @@ jobs:
       run: |
         dub test ${{ env.DUB_BUILD_CFG_FLAG }} --build=debug
         dub test ${{ env.DUB_BUILD_CFG_FLAG }} --build=release
-        dub run -y redub -- test ${{ env.DUB_BUILD_CFG_FLAG }} --build=debug
-        dub run -y redub -- test ${{ env.DUB_BUILD_CFG_FLAG }} --build=release
+        dub run -y redub -- test --build=debug
+        dub run -y redub -- test --build=release

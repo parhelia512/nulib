@@ -33,13 +33,16 @@ buildRequirements "allowWarnings" platform="gdc"
 dflags "-oq" platform="ldc"
 x:ddoxFilterArgs "--min-protection=Public" \
     "--ex" "nulib.collections.internal" \
-    "--ex" "nulib.memory.internal"
+    "--ex" "nulib.memory.internal" \
+    "--ex" "nulib.threading.internal"
 
 
 // Build configurations, static should be preferred.
 // Do NOT change the order of these.
 configuration "library" {
     targetType "staticLibrary"
+
+    dflags "--disable-linker-strip-dead" platform="ldc"
 }
 
 configuration "unittest" {

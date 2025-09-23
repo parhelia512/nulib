@@ -12,14 +12,14 @@ dependency "nulib:stdc" version="*"
 // OS Integration
 dependency "nulib:os_win32" path="os/os_win32/"
 dependency "nulib:os_posix" path="os/os_posix/"
-dependency "nulib:os_apple" path="os/os_apple/"
+// dependency "nulib:os_apple" path="os/os_apple/"
 
 // Basic configuration
 targetPath "out/"
 
 subPackage "os/os_win32"
 subPackage "os/os_posix"
-subPackage "os/os_apple"
+// subPackage "os/os_apple"
 
 // Sub-packages
 subPackage "modules/com"

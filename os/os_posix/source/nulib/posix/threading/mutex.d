@@ -13,6 +13,17 @@ import nulib.threading.internal.mutex;
 import nulib.posix.pthread;
 import numem;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+else version (VisionOS)
+    version = Darwin;
+
 /**
     Native implementation of a mutually exclusive lock.
 */
@@ -89,3 +100,8 @@ NativeMutex _nu_mutex_new() @trusted @nogc nothrow {
 //
 //          BINDINGS
 //
+version(Darwin) {
+
+} else version(Posix) {
+    
+}

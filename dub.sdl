@@ -41,8 +41,6 @@ x:ddoxFilterArgs "--min-protection=Public" \
 // Do NOT change the order of these.
 configuration "library" {
     targetType "staticLibrary"
-
-    dflags "--disable-linker-strip-dead" platform="ldc"
 }
 
 configuration "unittest" {

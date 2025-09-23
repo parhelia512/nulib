@@ -8,6 +8,9 @@ configuration "library" {
     platforms "posix"
     targetType "staticLibrary"
 
+    // LDC for some reason discards the typeinfo?!?
+    lflags "--unresolved-symbols=ignore-all" platform="linux-ldc"
+
     // Ensures this overwrites the weak linkage elements.
     lflags "-all_load" platform="osx"
     lflags "-all_load" platform="ios"

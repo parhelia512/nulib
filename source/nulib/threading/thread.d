@@ -164,7 +164,7 @@ unittest {
 @("isRunning")
 unittest {
     Thread t = nogc_new!Thread(() {
-        Thread.sleep(100);
+        Thread.sleep(500);
     }).start();
     assert(t.isRunning);
 
@@ -175,7 +175,7 @@ unittest {
 @("tid")
 unittest {
     Thread t = nogc_new!Thread(() {
-        Thread.sleep(100);
+        Thread.sleep(500);
     }).start();
     assert(t.isRunning);
     assert(t.tid() != Thread.selfTid());

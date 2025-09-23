@@ -19,6 +19,9 @@ dub.selections.json
 __dummy_docs/
 out/
 
+# redub Junk
+.ldc2_cache
+
 # Windows metadata
 *.winmd
 

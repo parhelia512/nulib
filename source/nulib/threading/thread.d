@@ -55,12 +55,27 @@ public:
     final @property ThreadId tid() => thread_.tid();
 
     /**
+        Whether the thread is currently running.
+    */
+    final @property bool isRunning() => thread_.isRunning();
+
+    /**
         Creates a new thread.
     */
     this(void delegate() callback) @nogc @trusted {
         it.ThreadContext context_;
         context_.userData = callback.ptr;
         context_.callback = cast(void function(void* ptr) @nogc)callback.funcptr;
+        this.thread_ = it.NativeThread.create(context_);
+    }
+
+    /**
+        Creates a new thread.
+    */
+    this(void function() callback) @nogc @trusted {
+        it.ThreadContext context_;
+        context_.userData = cast(void*)this;
+        context_.callback = cast(void function(void* ptr) @nogc)callback;
         this.thread_ = it.NativeThread.create(context_);
     }
 
@@ -92,7 +107,8 @@ public:
             This thread instance, allowing chaining.
     */
     Thread start() @nogc @safe {
-        thread_.start();
+        if (thread_)
+            thread_.start();
         return this;
     }
 
@@ -106,7 +122,8 @@ public:
             This thread instance, allowing chaining.
     */
     Thread cancel() @nogc @system {
-        thread_.cancel();
+        if (thread_)
+            thread_.cancel();
         return this;
     }
 
@@ -115,14 +132,54 @@ public:
         completes.
 
         Params:
+            timeout =   How long to wait for the thread to exit, 
+                        0 to wait forever.
             rethrow =   Whether exections should be rethrown into
                         this thread.
 
         Returns:
-            This thread instance, allowing chaining.
+            Whether the thread exited within the given time.
     */
-    Thread join(bool rethrow = false) @nogc @safe {
-        thread_.join(rethrow);
-        return this;
+    bool join(uint timeout = 0, bool rethrow = false) @nogc @safe {
+        if (thread_)
+            return thread_.join(timeout, rethrow);
+        return false;
     }
+}
+
+@("start & join")
+unittest {
+    uint v = 0;
+
+    Thread t = nogc_new!Thread(() {
+        foreach(i; 0..100)
+            v += 1;
+    }).start();
+    t.join();
+
+    assert(v == 100);
+    nogc_delete(t);
+}
+
+@("isRunning")
+unittest {
+    Thread t = nogc_new!Thread(() {
+        Thread.sleep(100);
+    }).start();
+    assert(t.isRunning);
+
+    t.join();
+    nogc_delete(t);
+}
+
+@("tid")
+unittest {
+    Thread t = nogc_new!Thread(() {
+        Thread.sleep(100);
+    }).start();
+    assert(t.isRunning);
+    assert(t.tid() != Thread.selfTid());
+
+    t.join();
+    nogc_delete(t);
 }

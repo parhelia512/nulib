@@ -18,7 +18,7 @@ else version (TVOS)
 else version (WatchOS)
     version = Darwin;
 
-extern(C) nothrow:
+extern(C) nothrow @nogc:
 
 //
 // Thread (THR)
@@ -1446,8 +1446,6 @@ version (CRuntime_Glibc) {
     static assert(false, "Unsupported platform");
 }
 
-@nogc:
-
 int pthread_cond_broadcast(pthread_cond_t*);
 int pthread_cond_destroy(pthread_cond_t*);
 int pthread_cond_init(const scope pthread_cond_t*, pthread_condattr_t*) @trusted;
@@ -1488,6 +1486,9 @@ int pthread_setcancelstate(int, int*);
 int pthread_setcanceltype(int, int*);
 int pthread_setspecific(pthread_key_t, const scope void*);
 void pthread_testcancel();
+int pthread_cancel(pthread_t);
+int pthread_attr_init(pthread_attr_t*);
+int pthread_attr_destroy(pthread_attr_t*);
 
 //
 // Barrier (BAR)

@@ -22,6 +22,7 @@ alias ThreadId = size_t;
 struct ThreadContext {
     void* userData;
     void function(void* userData) callback;
+    Exception ex;
 }
 
 /**
@@ -37,6 +38,11 @@ public:
         ID of the thread.    
     */
     abstract @property ThreadId tid() @safe;
+
+    /**
+        Whether the thread is currently running.
+    */
+    abstract @property bool isRunning() @safe;
 
     /**
         Starts the given thread.
@@ -55,8 +61,9 @@ public:
         Waits for the thread to finish execution.
     
         Params:
+            timeout = How long to wait for the thread to exit.
             rethrow = Whether execptions thrown in the thread should be rethrown.
     */
-    abstract void join(bool rethrow) @safe;
+    abstract bool join(uint timeout, bool rethrow) @safe;
 }
 

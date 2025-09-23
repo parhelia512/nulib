@@ -102,12 +102,5 @@ NativeSemaphore _nu_semaphore_new(uint count) @trusted @nogc nothrow {
 //
 extern(Windows) @nogc nothrow:
 
-enum uint INFINITE           = 0xFFFFFFFF;
-enum uint WAIT_OBJECT_0      = 0;
-enum uint WAIT_ABANDONED     = 0x00000080;
-enum uint WAIT_TIMEOUT       = 0x00000102;
-enum uint WAIT_FAILED        = 0xFFFFFFFF;
-
 extern HANDLE CreateSemaphoreA(void*, int, int, void*);
-extern uint WaitForSingleObject(HANDLE, uint);
 extern uint ReleaseSemaphore(HANDLE, int, int*);

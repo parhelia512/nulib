@@ -59,10 +59,12 @@ public:
 private extern(C):
 import core.attribute : weak;
 
-version(linux) {
+version(DigitalMars) version = WeakIsBroken;
+version(linux) version = WeakIsBroken;
+version(WeakIsBroken) {
 
     // Needed on Linux because we can't specify load order.
-    extern NativeMutex _nu_mutex_new() @nogc @trusted nothrow;
+    extern(C) extern NativeMutex _nu_mutex_new() @nogc @trusted nothrow;
 } else {
     
     /*

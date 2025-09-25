@@ -22,6 +22,11 @@ private:
 
 public:
 
+    /**
+        The native implementation defined handle of the semaphore.
+    */
+    final @property NativeSemaphore nativeHandle() => semaphore_;
+
     /// Destructor
     ~this() {
         nogc_delete(semaphore_);

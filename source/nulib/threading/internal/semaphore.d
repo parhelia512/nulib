@@ -69,10 +69,12 @@ public:
 private extern(C):
 import core.attribute : weak;
 
-version(linux) {
+version(DigitalMars) version = WeakIsBroken;
+version(linux) version = WeakIsBroken;
+version(WeakIsBroken) {
 
     // Needed on Linux because we can't specify load order.
-    extern NativeSemaphore _nu_semaphore_new(uint count) @nogc nothrow;
+    extern(C) extern NativeSemaphore _nu_semaphore_new(uint count) @nogc nothrow;
 } else {
 
     /*

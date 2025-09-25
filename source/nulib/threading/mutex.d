@@ -22,6 +22,11 @@ private:
 
 public:
 
+    /**
+        The native implementation defined handle of the mutex.
+    */
+    final @property NativeMutex nativeHandle() => mutex_;
+
     /// Destructor
     ~this() {
         nogc_delete(mutex_);

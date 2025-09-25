@@ -25,6 +25,11 @@ private:
     it.NativeThread thread_;
 
 protected:
+
+    /**
+        The native implementation defined handle of the thread.
+    */
+    final @property it.NativeThread nativeHandle() => thread_;
     
     /**
         Virtual function which may be overridden.
@@ -149,7 +154,8 @@ public:
 
 @("start & join")
 unittest {
-    uint v = 0;
+    import std.format : format;
+    __gshared uint v = 0;
 
     Thread t = nogc_new!Thread(() {
         foreach(i; 0..100)
@@ -157,7 +163,8 @@ unittest {
     }).start();
     t.join();
 
-    assert(v == 100);
+    assert(t.nativeHandle, "Thread handle was null!");
+    assert(v == 100, "Expected 100, got %s".format(v));
     nogc_delete(t);
 }
 

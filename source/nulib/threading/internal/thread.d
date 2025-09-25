@@ -147,13 +147,14 @@ int totalCPUs() @weak nothrow @nogc {
 
 private extern(C):
 
-
-version(linux) {
+version(DigitalMars) version = WeakIsBroken;
+version(linux) version = WeakIsBroken;
+version(WeakIsBroken) {
 
     // Needed on Linux because we can't specify load order.
-    extern NativeThread _nu_thread_new(ThreadContext) @trusted @nogc nothrow;
-    extern ThreadId _nu_thread_current_tid() @trusted @nogc nothrow;
-    extern void _nu_thread_sleep(uint) @trusted @nogc nothrow;
+    extern(C) extern NativeThread _nu_thread_new(ThreadContext) @trusted @nogc nothrow;
+    extern(C) extern ThreadId _nu_thread_current_tid() @trusted @nogc nothrow;
+    extern(C) extern void _nu_thread_sleep(uint) @trusted @nogc nothrow;
 } else {
 
     /*

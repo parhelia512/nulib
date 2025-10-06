@@ -63,9 +63,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: 'Install ${{ matrix.dc }}'
-      uses: dlang-community/setup-dlang@v2
+      uses: MrcSnm/setup-dlang@v2
       with:
         compiler: ${{ matrix.dc }}
+        verify_sig: false
+        dub: latest
+        redub: latest
       
     - name: 'Install linux dependencies...'
       if: ${{ inputs.linux_deps != '' && matrix.os == 'ubuntu-latest' }}
@@ -103,8 +106,8 @@ jobs:
       working-directory:  '${{ inputs.repo }}'
       if: ${{ matrix.dc != 'dmd' }}
       run: |
-        dub run -y redub -- build ${{ env.DUB_BUILD_CFG_FLAG }} --build=debug
-        dub run -y redub -- build ${{ env.DUB_BUILD_CFG_FLAG }} --build=release
+        redub build ${{ env.DUB_BUILD_CFG_FLAG }} --build=debug
+        redub build ${{ env.DUB_BUILD_CFG_FLAG }} --build=release
       
     - name: 'Attempting to run tests...'
       working-directory: '${{ inputs.repo }}'

@@ -28,10 +28,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install compiler
-      uses: dlang-community/setup-dlang@v2
+    - name: 'Install ${{ matrix.dc }}'
+      uses: MrcSnm/setup-dlang@v2
       with:
         compiler: ${{ matrix.dc }}
+        verify_sig: false
+        dub: latest
+        redub: latest
 
     - name: 'Build with ${{ matrix.os }} ${{ matrix.dc }}' 
       run: |
@@ -47,8 +50,8 @@ jobs:
     - name: 'Build with ${{ matrix.os }} ${{ matrix.dc }} (redub)'
       if: ${{ matrix.dc != 'dmd' }}
       run: |
-        dub run -y redub -- test
-        dub run -y redub -- test --build=release
+        redub test 
+        redub test --build=release
 
   test_build:
     name: 'Do buildchecks'

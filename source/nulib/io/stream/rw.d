@@ -57,7 +57,7 @@ public:
     /**
         The stream this reader is reading from
     */
-    @property Stream stream() { return stream_; }
+    @property Stream stream() => stream_;
 
     /**
         Constructs a new stream reader
@@ -175,16 +175,9 @@ public:
             The UTF8 string read from the stream.
     */
     nstring readUTF8(uint length) @trusted {
-        nstring str = nstring(length);
-
-        ptrdiff_t read = stream.read(cast(ubyte[])str.value);
-        if (read <= 0) {
-            str.resize(0);
-            return str;
-        }
-
-        str.resize(read);
-        return str;
+        nstring result = nstring(length);
+        ptrdiff_t read = stream.read(cast(ubyte[])result.value);
+        return read <= 0 ? nstring.init : result;
     }
 
     /**
@@ -212,7 +205,7 @@ public:
 
         // Copy UTF-16 string out.
         nwstring out_ = nwstring(nu_etoh!wchar(buffer, getEndianFromBOM(bom)));
-        buffer = nu_resize(buffer, 0, 1);
+        nu_freea(buffer);
         return out_;
     }
 
@@ -228,7 +221,7 @@ public:
     nwstring readUTF16LE(uint length) @trusted {
         wchar[] buffer = this.readEndianSeq!(wchar, Endianess.littleEndian)(length);
         nwstring out_ = nwstring(buffer);
-        buffer = nu_resize(buffer, 0, 1);
+        nu_freea(buffer);
         return out_;
     }
 
@@ -244,7 +237,7 @@ public:
     nwstring readUTF16BE(uint length) @trusted {
         wchar[] buffer = this.readEndianSeq!(wchar, Endianess.bigEndian)(length);
         nwstring out_ = nwstring(buffer);
-        buffer = nu_resize(buffer, 0, 1);
+        nu_freea(buffer);
         return out_;
     }
 
@@ -273,7 +266,7 @@ public:
 
         // Copy UTF-16 string out.
         ndstring out_ = ndstring(nu_etoh!dchar(buffer, getEndianFromBOM(bom)));
-        buffer = nu_resize(buffer, 0, 1);
+        nu_freea(buffer);
         return out_;
     }
 
@@ -289,7 +282,7 @@ public:
     ndstring readUTF32LE(uint length) @trusted {
         dchar[] buffer = this.readEndianSeq!(dchar, Endianess.littleEndian)(length);
         ndstring out_ = ndstring(buffer);
-        buffer = nu_resize(buffer, 0, 1);
+        nu_freea(buffer);
         return out_;
     }
 
@@ -320,13 +313,36 @@ class StreamWriter : NuObject {
 private:
     Stream stream_;
 
+    // Reads a sequence of bytes and ensures their endianness is correct.
+    // Additionally does a type-cast
+    pragma(inline, true)
+    void writeEndian(Endianess endian, T)(T value) @trusted if (__traits(isScalar, T)) {
+        import numem.core.traits : Unqual;
+        alias UT = Unqual!T;
+
+        value = cast(T)nu_etoh!(T, endian)(cast(UT)value);
+        ubyte[] bufferView = (cast(ubyte*)&value)[0..T.sizeof];
+        stream.write(bufferView);
+    }
+
+    // Reads a sequence of bytes and ensures their endianness is correct.
+    pragma(inline, true)
+    void writeEndianSeq(Endianess endian, T)(T[] values) @trusted if (__traits(isScalar, T)) {
+        import numem.core.traits : Unqual;
+        alias UT = Unqual!(T[]);
+
+        auto buffer = cast(ubyte[])cast(void[])nu_etoh!(UT, endian)(cast(UT)values.nu_dup());
+        stream.write(buffer);
+        nu_freea(buffer);
+    }
+
 public:
 @safe:
 
     /**
         The stream this writer is writing to
     */
-    @property Stream stream() { return stream_; }
+    @property Stream stream() => stream_;
 
     /**
         Constructs a new stream writer
@@ -334,5 +350,84 @@ public:
     this(Stream stream) @trusted{
         enforce(stream.canWrite(), nogc_new!StreamUnsupportedException(stream));
         this.stream_ = stream;
+    }
+
+    /**
+        Reads a value from the stream.
+        
+        Returns:
+            The read value.
+    */
+    void writeLE(T)(T value) { writeEndian!(Endianess.littleEndian)(value); }
+    void writeBE(T)(T value) { writeEndian!(Endianess.littleEndian)(value); }
+
+    /**
+        Writes a UTF8 string to the stream.
+
+        Params:
+            value = The string to write to the stream.
+    */
+    void writeUTF8(string value) @trusted {
+        stream.write(cast(ubyte[])value);
+    }
+
+    /**
+        Writes a UTF16 string to the stream.
+
+        Params:
+            value = The string to write to the stream.
+    */
+    void writeUTF16(wstring value) @trusted {
+        stream.write(cast(ubyte[])cast(void[])value);
+    }
+
+    /**
+        Writes a UTF16 string to the stream.
+
+        Params:
+            value = The string to write to the stream.
+    */
+    void writeUTF16LE(wstring value) @trusted {
+        this.writeEndianSeq!(Endianess.littleEndian)(value);
+    }
+
+    /**
+        Writes a UTF16 string to the stream.
+
+        Params:
+            value = The string to write to the stream.
+    */
+    void writeUTF16BE(wstring value) @trusted {
+        this.writeEndianSeq!(Endianess.bigEndian)(value);
+    }
+
+    /**
+        Writes a UTF32 string to the stream.
+
+        Params:
+            value = The string to write to the stream.
+    */
+    void writeUTF32(dstring value) @trusted {
+        stream.write(cast(ubyte[])cast(void[])value);
+    }
+
+    /**
+        Writes a UTF32 string to the stream.
+
+        Params:
+            value = The string to write to the stream.
+    */
+    void writeUTF32LE(dstring value) @trusted {
+        this.writeEndianSeq!(Endianess.littleEndian)(value);
+    }
+
+    /**
+        Writes a UTF32 string to the stream.
+
+        Params:
+            value = The string to write to the stream.
+    */
+    void writeUTF32BE(dstring value) @trusted {
+        this.writeEndianSeq!(Endianess.bigEndian)(value);
     }
 }
